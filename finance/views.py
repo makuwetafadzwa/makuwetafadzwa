@@ -1,8 +1,10 @@
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -18,6 +20,7 @@ from core.mixins import AuditMixin
 from jobs.models import Job
 from .forms import InvoiceForm, InvoiceLineFormSet, PaymentForm
 from .models import Invoice, InvoiceStatus, Payment
+from .pdf import build_invoice_pdf
 
 
 class InvoiceListView(LoginRequiredMixin, ListView):
@@ -122,6 +125,19 @@ def issue_invoice(request, pk):
     invoice.save(update_fields=["status", "updated_at"])
     messages.success(request, "Invoice issued.")
     return redirect(invoice.get_absolute_url())
+
+
+def invoice_pdf(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    buffer = BytesIO()
+    build_invoice_pdf(buffer, invoice)
+    pdf = buffer.getvalue()
+    buffer.close()
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="{invoice.invoice_number}.pdf"'
+    )
+    return response
 
 
 class PaymentListView(LoginRequiredMixin, ListView):

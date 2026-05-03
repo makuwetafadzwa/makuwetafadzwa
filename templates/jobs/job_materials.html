@@ -5,20 +5,22 @@
     {% csrf_token %}
     {{ formset.management_form }}
     <table class="w-full text-sm">
-        <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-2">Product</th><th>Required</th><th>Used</th><th>Notes</th><th>Delete</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
-        {% for f in formset %}
+        <thead class="text-xs uppercase text-slate-500">
             <tr>
-                <td class="py-2 pr-2">{{ f.product }}{{ f.id }}</td>
-                <td class="pr-2">{{ f.quantity_required }}</td>
-                <td class="pr-2">{{ f.quantity_used }}</td>
-                <td class="pr-2">{{ f.notes }}</td>
-                <td>{{ f.DELETE }}</td>
+                <th class="text-left py-2">Product</th>
+                <th class="text-left py-2">Required</th>
+                <th class="text-left py-2">Used</th>
+                <th class="text-left py-2">Notes</th>
+                <th class="text-left py-2">Delete</th>
             </tr>
-        {% endfor %}
+        </thead>
+        <tbody id="formset-rows-{{ formset.prefix }}" class="divide-y divide-slate-100">
+            {% for f in formset %}{% include "jobs/_material_row.html" %}{% endfor %}
         </tbody>
     </table>
-    <div class="mt-4 flex gap-2">
+    <template id="empty-form-{{ formset.prefix }}">{% include "jobs/_material_row.html" with f=formset.empty_form %}</template>
+    <div class="mt-4 flex flex-wrap gap-2">
+        <button type="button" data-prefix="{{ formset.prefix }}" onclick="aluflowAddRow(this)" class="text-sm border border-dashed border-slate-300 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50">+ Add another material</button>
         <button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">Save BOM</button>
         <a href="{{ job.get_absolute_url }}" class="text-sm border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">Cancel</a>
     </div>

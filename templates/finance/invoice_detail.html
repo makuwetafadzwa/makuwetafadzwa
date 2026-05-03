@@ -2,6 +2,7 @@
 {% load humanize %}
 {% block page_title %}{{ invoice.invoice_number }}{% endblock %}
 {% block topbar_actions %}
+<a href="{% url 'finance:invoice_pdf' invoice.pk %}" target="_blank" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">📄 PDF</a>
 <a href="{% url 'finance:invoice_lines' invoice.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Lines</a>
 <a href="{% url 'finance:invoice_edit' invoice.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
 {% if invoice.status == 'draft' %}<a href="{% url 'finance:invoice_issue' invoice.pk %}" class="bg-sky-600 hover:bg-sky-700 text-white text-sm px-3 py-2 rounded-lg">Issue Invoice</a>{% endif %}

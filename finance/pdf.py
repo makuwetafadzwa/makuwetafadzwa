@@ -1,14 +1,10 @@
-"""PDF generation for quotations using ReportLab.
+"""PDF generation for invoices using ReportLab.
 
-Produces a professional A4 quotation in the style commonly used by
-Aluflow Investments — logo + address top-left, big QUOTATION + meta
-table top-right, customer info bar, itemised table with subtotal /
-deposit / balance, terms, customer-acceptance signature box, and
-banking details at the foot.
-
-Multi-page quotes are handled automatically — the items table splits
-across pages with the column header repeating, and pages 2+ get a
-"<quote_no> (continued)" header line.
+Mirrors the Aluflow quotation PDF style — logo + address top-left, big
+INVOICE + meta table top-right, customer info bar, itemised table,
+totals stack with paid / balance, payment instructions, and banking
+details. Multi-page invoices are supported with a repeating column
+header and a "INVOICE <number> (continued)" line on subsequent pages.
 """
 from decimal import Decimal
 
@@ -31,10 +27,7 @@ from core.pdf_base import (
 )
 
 
-DEPOSIT_PERCENT = Decimal("75")  # company-wide default deposit on acceptance
-
-
-def build_quotation_pdf(buffer, quotation):
+def build_invoice_pdf(buffer, invoice):
     from company_settings.models import CompanyProfile
 
     company = CompanyProfile.objects.first()
@@ -43,7 +36,7 @@ def build_quotation_pdf(buffer, quotation):
 
     doc = build_aluflow_document(
         buffer,
-        title=f"Quotation {quotation.quote_number}",
+        title=f"Invoice {invoice.invoice_number}",
         author=company_name,
     )
 
@@ -56,7 +49,7 @@ def build_quotation_pdf(buffer, quotation):
 
     story = []
 
-    # ------- 1. HEADER ROW -------
+    # ------- 1. HEADER -------
     left_cell = []
     if company and company.logo:
         try:
@@ -78,24 +71,24 @@ def build_quotation_pdf(buffer, quotation):
             addr_lines.append(f"Phone: {company.phone}")
         if company.email:
             addr_lines.append(company.email)
+        if company.tax_number:
+            addr_lines.append(f"Tax No: {company.tax_number}")
     if addr_lines:
         left_cell.append(Paragraph("<br/>".join(addr_lines), body_sm))
 
-    quotation_word = Paragraph("QUOTATION", huge_title)
-    valid_until = (
-        quotation.valid_until.strftime("%d/%m/%Y") if quotation.valid_until else "—"
-    )
+    invoice_word = Paragraph("INVOICE", huge_title)
+    due = invoice.due_date.strftime("%d/%m/%Y") if invoice.due_date else "—"
     meta_table = Table(
         [
-            [Paragraph("QUOTE #", label), Paragraph("DATE", label)],
+            [Paragraph("INVOICE #", label), Paragraph("DATE", label)],
             [
-                Paragraph(quotation.quote_number, value),
-                Paragraph(quotation.issue_date.strftime("%d/%m/%Y"), value),
+                Paragraph(invoice.invoice_number, value),
+                Paragraph(invoice.issue_date.strftime("%d/%m/%Y"), value),
             ],
-            [Paragraph("CUSTOMER ID", label), Paragraph("VALID UNTIL", label)],
+            [Paragraph("CUSTOMER ID", label), Paragraph("DUE DATE", label)],
             [
-                Paragraph(quotation.customer.customer_code or "", value),
-                Paragraph(valid_until, value),
+                Paragraph(invoice.customer.customer_code or "", value),
+                Paragraph(due, value),
             ],
         ],
         colWidths=[40 * mm, 35 * mm],
@@ -116,7 +109,7 @@ def build_quotation_pdf(buffer, quotation):
     )
 
     header = Table(
-        [[left_cell, [quotation_word, Spacer(1, 4 * mm), meta_table]]],
+        [[left_cell, [invoice_word, Spacer(1, 4 * mm), meta_table]]],
         colWidths=[100 * mm, 80 * mm],
     )
     header.setStyle(
@@ -131,10 +124,10 @@ def build_quotation_pdf(buffer, quotation):
     story.append(header)
     story.append(Spacer(1, 5 * mm))
 
-    # ------- 2. CUSTOMER INFO + PREPARED BY -------
-    cust = quotation.customer
+    # ------- 2. CUSTOMER INFO + JOB REF -------
+    cust = invoice.customer
     customer_header = Table(
-        [[Paragraph("CUSTOMER INFO", section_header)]],
+        [[Paragraph("BILL TO", section_header)]],
         colWidths=[80 * mm],
     )
     customer_header.setStyle(
@@ -160,25 +153,36 @@ def build_quotation_pdf(buffer, quotation):
         cust_lines.append(cust.address_line1)
     if cust.city:
         cust_lines.append(f"{cust.city}, {cust.country}")
+    if cust.tax_number:
+        cust_lines.append(f"Tax No: {cust.tax_number}")
     contact_bits = " · ".join(filter(None, [cust.phone, cust.email]))
     if contact_bits:
         cust_lines.append(contact_bits)
     customer_text = Paragraph("<br/>".join(cust_lines), body_sm)
 
-    prepared_by_user = ""
-    if quotation.created_by:
-        prepared_by_user = (
-            quotation.created_by.get_full_name() or quotation.created_by.username
-        )
-    prepared_by = Paragraph(
-        f"<i>Prepared By:</i><br/><b>{prepared_by_user}</b>", body_sm
+    job_ref = invoice.job.job_number if invoice.job else "—"
+    status_label = invoice.get_status_display().upper()
+    status_colour = {
+        "PAID": "#10b981",
+        "PARTIALLY PAID": "#f59e0b",
+        "OVERDUE": "#ef4444",
+        "ISSUED": "#3b82f6",
+        "DRAFT": "#6b7280",
+        "CANCELLED": "#6b7280",
+    }.get(status_label, "#374151")
+    status_para = Paragraph(
+        f'<font color="{status_colour}"><b>{status_label}</b></font>',
+        body_sm,
+    )
+    right_block = Paragraph(
+        f"<i>Job:</i> <b>{job_ref}</b><br/><i>Status:</i> ", body_sm
     )
 
     cust_row = Table(
         [
             [
                 [customer_header, Spacer(1, 3 * mm), customer_text],
-                [Spacer(1, 12 * mm), prepared_by],
+                [Spacer(1, 12 * mm), right_block, status_para],
             ]
         ],
         colWidths=[100 * mm, 80 * mm],
@@ -195,33 +199,26 @@ def build_quotation_pdf(buffer, quotation):
     story.append(cust_row)
     story.append(Spacer(1, 4 * mm))
 
-    # ------- 3. ITEMS TABLE (splits across pages, header repeats) -------
-    items = list(quotation.items.all())
-    rows = [["DESCRIPTION", "SIZE", "QTY", "UNIT PRICE", "AMOUNT"]]
-    for item in items:
-        size = (
-            f"{item.width_mm} x {item.height_mm}"
-            if item.width_mm and item.height_mm
-            else ""
-        )
+    # ------- 3. ITEMS TABLE -------
+    lines = list(invoice.lines.all())
+    rows = [["DESCRIPTION", "QTY", "UNIT PRICE", "AMOUNT"]]
+    for line in lines:
         rows.append(
             [
-                Paragraph(item.description, body_sm),
-                size,
-                f"{item.quantity:g}",
-                money(item.unit_price),
-                money(item.line_total),
+                Paragraph(line.description, body_sm),
+                f"{line.quantity:g}",
+                money(line.unit_price),
+                money(line.line_total),
             ]
         )
-    # Pad with a few blank rows for visual balance only when the quote is short
-    if len(items) <= 5:
-        for _ in range(max(0, 5 - len(items))):
-            rows.append(["", "", "", "", ""])
+    if len(lines) <= 4:
+        for _ in range(max(0, 4 - len(lines))):
+            rows.append(["", "", "", ""])
 
     items_table = Table(
         rows,
-        colWidths=[70 * mm, 35 * mm, 15 * mm, 30 * mm, 30 * mm],
-        repeatRows=1,  # repeat the column header on every continuation page
+        colWidths=[100 * mm, 20 * mm, 30 * mm, 30 * mm],
+        repeatRows=1,
     )
     items_table.setStyle(
         TableStyle(
@@ -230,8 +227,7 @@ def build_quotation_pdf(buffer, quotation):
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                ("ALIGN", (2, 0), (2, -1), "CENTER"),
-                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+                ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("BOX", (0, 0), (-1, -1), 0.75, colors.black),
                 ("LINEBELOW", (0, 0), (-1, 0), 0.75, colors.black),
@@ -245,22 +241,18 @@ def build_quotation_pdf(buffer, quotation):
     )
     story.append(items_table)
 
-    # ------- 4. TAGLINE + TOTALS -------
-    deposit_pct = DEPOSIT_PERCENT
-    deposit_amt = (quotation.grand_total * deposit_pct / Decimal("100")).quantize(Decimal("0.01"))
-    balance = (quotation.grand_total - deposit_amt).quantize(Decimal("0.01"))
+    # ------- 4. TAGLINE + TOTALS (with paid/balance) -------
+    paid = invoice.paid_amount
+    balance = invoice.balance
 
-    totals_data = [["SUBTOTAL", money(quotation.subtotal)]]
-    if quotation.discount_amount > 0:
-        totals_data.append(
-            [f"DISCOUNT ({quotation.discount_percent:g}%)", "-" + money(quotation.discount_amount)]
-        )
-    if quotation.tax_amount > 0:
-        totals_data.append([f"VAT ({quotation.tax_percent:g}%)", money(quotation.tax_amount)])
-    if quotation.discount_amount > 0 or quotation.tax_amount > 0:
-        totals_data.append(["TOTAL", money(quotation.grand_total)])
-    totals_data.append([f"DEPOSIT ({deposit_pct:g}%)", money(deposit_amt)])
-    totals_data.append(["BAL ON COMPL", f"{sym}  {balance:,.2f}"])
+    totals_data = [["SUBTOTAL", money(invoice.subtotal)]]
+    if invoice.discount_amount > 0:
+        totals_data.append(["DISCOUNT", "-" + money(invoice.discount_amount)])
+    if invoice.tax_amount > 0:
+        totals_data.append([f"VAT ({invoice.tax_percent:g}%)", money(invoice.tax_amount)])
+    totals_data.append(["TOTAL", money(invoice.total)])
+    totals_data.append(["PAID", money(paid)])
+    totals_data.append(["BALANCE DUE", f"{sym}  {balance:,.2f}"])
 
     totals = Table(totals_data, colWidths=[50 * mm, 40 * mm])
     totals.setStyle(
@@ -272,6 +264,7 @@ def build_quotation_pdf(buffer, quotation):
                 ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
                 ("BACKGROUND", (0, 0), (-1, -2), colors.HexColor("#e5e7eb")),
                 ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#d1d5db")),
+                ("TEXTCOLOR", (0, -2), (-1, -2), colors.HexColor("#10b981")),
                 ("BOX", (0, 0), (-1, -1), 0.75, colors.black),
                 ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.black),
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
@@ -307,66 +300,38 @@ def build_quotation_pdf(buffer, quotation):
     story.append(tagline_totals)
     story.append(Spacer(1, 4 * mm))
 
-    # ------- 5. TERMS -------
-    balance_pct = Decimal("100") - deposit_pct
-    terms_lines = [
-        "This is a quotation on the goods named, subject to the conditions noted below:",
-        f"This quote may change at any time without prior notice and subject to the standard {company_name} terms and conditions.",
-        f"This quote will only be valid once the deposit of {deposit_pct:g}% has been paid.",
-        "This quotation will become a contract once accepted and signed by both parties.",
-    ]
-    terms_block = [Paragraph(line, body_sm) for line in terms_lines]
-    terms_block.append(Spacer(1, 3 * mm))
-    terms_block.append(Paragraph("<b>Payment arrangement:</b>", body_sm))
-    terms_block.append(Paragraph(f"{deposit_pct:g}% ON ACCEPTANCE OF ORDER", body_sm))
-    terms_block.append(Paragraph(f"{balance_pct:g}% ON COMPLETION", body_sm))
-    terms_block.append(Spacer(1, 3 * mm))
-    terms_block.append(Paragraph("To accept this quotation, sign here and return:", body_sm))
-    terms_block.append(Spacer(1, 2 * mm))
+    # ------- 5. PAYMENT INSTRUCTIONS / NOTES -------
+    body_block = []
+    if invoice.notes:
+        body_block.append(Paragraph("<b>NOTES</b>", body_sm))
+        for line in invoice.notes.splitlines():
+            line = line.strip()
+            if line:
+                body_block.append(Paragraph(line, body_sm))
+        body_block.append(Spacer(1, 3 * mm))
 
-    # ------- 6. ACCEPTANCE BOX -------
-    acceptance = Table(
-        [
-            [Paragraph("<b>Customer Acceptance</b>", body_sm), "", ""],
-            ["", "", ""],
-            ["Signature", "Printed Name", "Date"],
-        ],
-        colWidths=[60 * mm, 60 * mm, 60 * mm],
-        rowHeights=[5 * mm, 11 * mm, 5 * mm],
-    )
-    acceptance.setStyle(
-        TableStyle(
-            [
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("BOX", (0, 1), (-1, 1), 0.6, colors.black),
-                ("INNERGRID", (0, 1), (-1, 1), 0.6, colors.black),
-                ("TEXTCOLOR", (0, 2), (-1, 2), colors.HexColor("#6b7280")),
-                ("ALIGN", (0, 2), (-1, 2), "LEFT"),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ]
+    body_block.append(
+        Paragraph(
+            "Please reference the invoice number above when making payment. "
+            "Thank you for your business — we look forward to serving you again.",
+            body_sm,
         )
     )
 
-    # Banking
-    banking_block = []
+    # ------- 6. BANKING DETAILS -------
     if company and company.bank_details:
-        banking_block.append(Spacer(1, 4 * mm))
-        banking_block.append(Paragraph("<b>BANKING DETAILS</b>", body_sm))
+        body_block.append(Spacer(1, 4 * mm))
+        body_block.append(Paragraph("<b>BANKING DETAILS</b>", body_sm))
         for line in company.bank_details.splitlines():
             line = line.strip()
             if line:
-                banking_block.append(Paragraph(f"<b>{line}</b>", body_sm))
+                body_block.append(Paragraph(f"<b>{line}</b>", body_sm))
 
-    # Keep the acceptance box together; allow the rest to flow.
-    story.extend(terms_block)
-    story.append(KeepTogether(acceptance))
-    story.extend(banking_block)
+    story.append(KeepTogether(body_block))
 
     # ------- Build with footer + continuation header -------
     render_aluflow_pdf(
         doc,
         story,
-        continuation_label=f"QUOTATION {quotation.quote_number}",
+        continuation_label=f"INVOICE {invoice.invoice_number}",
     )
