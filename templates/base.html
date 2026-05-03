@@ -64,5 +64,28 @@
     {% block public_content %}{% endblock %}
 {% endif %}
 {% block extra_scripts %}{% endblock %}
+<script>
+/* Aluflow formset helper:
+   Clones a hidden <template id="empty-form-{prefix}"> row and appends it
+   to <tbody id="formset-rows-{prefix}">, replacing __prefix__ with the
+   next form index and incrementing the management form's TOTAL_FORMS. */
+function aluflowAddRow(button) {
+    const prefix = button.dataset.prefix || 'form';
+    const total = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+    const tpl = document.getElementById(`empty-form-${prefix}`);
+    const tbody = document.getElementById(`formset-rows-${prefix}`);
+    if (!total || !tpl || !tbody) {
+        console.warn('aluflowAddRow: missing element', {prefix});
+        return;
+    }
+    const newIndex = parseInt(total.value, 10);
+    const html = tpl.innerHTML.replace(/__prefix__/g, newIndex);
+    /* table rows must be parsed inside a <table> to be valid */
+    const wrap = document.createElement('table');
+    wrap.innerHTML = `<tbody>${html}</tbody>`;
+    Array.from(wrap.querySelectorAll('tr')).forEach(tr => tbody.appendChild(tr));
+    total.value = newIndex + 1;
+}
+</script>
 </body>
 </html>

@@ -2,22 +2,25 @@
 {% block page_title %}PO Lines · {{ po.po_number }}{% endblock %}
 {% block content %}
 <form method="post" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-    {% csrf_token %}{{ formset.management_form }}
+    {% csrf_token %}
+    {{ formset.management_form }}
     <table class="w-full text-sm">
-        <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-2">Product</th><th>Qty</th><th>Unit Cost</th><th>Received</th><th>Delete</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
-        {% for f in formset %}
-        <tr>
-            <td class="py-2 pr-2">{{ f.product }}{{ f.id }}</td>
-            <td class="pr-2">{{ f.quantity }}</td>
-            <td class="pr-2">{{ f.unit_cost }}</td>
-            <td class="pr-2">{{ f.received_quantity }}</td>
-            <td>{{ f.DELETE }}</td>
-        </tr>
-        {% endfor %}
+        <thead class="text-xs uppercase text-slate-500">
+            <tr>
+                <th class="text-left py-2">Product</th>
+                <th class="text-left py-2">Qty</th>
+                <th class="text-left py-2">Unit Cost</th>
+                <th class="text-left py-2">Received</th>
+                <th class="text-left py-2">Delete</th>
+            </tr>
+        </thead>
+        <tbody id="formset-rows-{{ formset.prefix }}" class="divide-y divide-slate-100">
+            {% for f in formset %}{% include "inventory/_po_line_row.html" %}{% endfor %}
         </tbody>
     </table>
-    <div class="mt-4 flex gap-2">
+    <template id="empty-form-{{ formset.prefix }}">{% include "inventory/_po_line_row.html" with f=formset.empty_form %}</template>
+    <div class="mt-4 flex flex-wrap gap-2">
+        <button type="button" data-prefix="{{ formset.prefix }}" onclick="aluflowAddRow(this)" class="text-sm border border-dashed border-slate-300 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50">+ Add another line</button>
         <button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">Save lines</button>
         <a href="{{ po.get_absolute_url }}" class="text-sm border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">Cancel</a>
     </div>

@@ -17,22 +17,13 @@
                 <th class="text-left py-2">Delete?</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
-        {% for f in formset %}
-            <tr>
-                <td class="py-2 pr-2">{{ f.location_label }}{{ f.id }}</td>
-                <td class="pr-2">{{ f.product_type }}</td>
-                <td class="pr-2">{{ f.width_mm }}</td>
-                <td class="pr-2">{{ f.height_mm }}</td>
-                <td class="pr-2">{{ f.quantity }}</td>
-                <td class="pr-2">{{ f.glass_type }}</td>
-                <td class="pr-2">{{ f.frame_color }}</td>
-                <td>{{ f.DELETE }}</td>
-            </tr>
-        {% endfor %}
+        <tbody id="formset-rows-{{ formset.prefix }}" class="divide-y divide-slate-100">
+            {% for f in formset %}{% include "site_visits/_measurement_row.html" %}{% endfor %}
         </tbody>
     </table>
-    <div class="mt-4 flex gap-2">
+    <template id="empty-form-{{ formset.prefix }}">{% include "site_visits/_measurement_row.html" with f=formset.empty_form %}</template>
+    <div class="mt-4 flex flex-wrap gap-2">
+        <button type="button" data-prefix="{{ formset.prefix }}" onclick="aluflowAddRow(this)" class="text-sm border border-dashed border-slate-300 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50">+ Add another measurement</button>
         <button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">Save measurements</button>
         <a href="{{ visit.get_absolute_url }}" class="text-sm border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">Cancel</a>
     </div>
