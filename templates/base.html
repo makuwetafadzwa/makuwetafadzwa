@@ -35,7 +35,22 @@
 <div class="flex min-h-screen">
     {% include "partials/sidebar.html" %}
     <div class="flex-1 flex flex-col min-w-0">
-        {% include "partials/topbar.html" %}
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <button type="button" class="md:hidden p-2 rounded-lg hover:bg-slate-100" onclick="document.querySelector('aside').classList.toggle('hidden')">☰</button>
+                <div class="min-w-0">
+                    <div class="text-xs uppercase tracking-wider text-slate-500">{% block breadcrumb %}{% endblock %}</div>
+                    <h1 class="text-lg font-semibold text-slate-900 truncate">{% block page_title %}{{ page_title|default:"" }}{% endblock %}</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 flex-wrap justify-end">
+                {% block topbar_actions %}{% endblock %}
+                <form action="{% url 'accounts:logout' %}" method="post" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50">Sign out</button>
+                </form>
+            </div>
+        </header>
         <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto">
             {% include "partials/messages.html" %}
             {% block content %}{% endblock %}
