@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block page_title %}{% if object %}Edit{% else %}New{% endif %} team{% endblock %}
+{% block content %}{% include "partials/form_card.html" with title="Team" action_label="Save" cancel_url='/installations/teams/' %}{% endblock %}

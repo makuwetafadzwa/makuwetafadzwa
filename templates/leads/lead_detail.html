@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.full_name }}{% endblock %}
+{% block breadcrumb %}Sales / Leads{% endblock %}
+{% block page_title %}{{ lead.full_name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'leads:edit' lead.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+{% if not lead.converted_customer %}
+<a href="{% url 'leads:convert' lead.pk %}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-2 rounded-lg">Convert to Customer</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                <div><div class="text-xs text-slate-500">Phone</div><div>{{ lead.phone }}</div></div>
+                <div><div class="text-xs text-slate-500">Email</div><div>{{ lead.email|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Source</div><div>{{ lead.get_source_display }}</div></div>
+                <div><div class="text-xs text-slate-500">Status</div><div>{{ lead.get_status_display }}</div></div>
+                <div><div class="text-xs text-slate-500">Interest</div><div>{{ lead.get_product_interest_display }}</div></div>
+                <div><div class="text-xs text-slate-500">Estimated Value</div><div>{{ lead.estimated_value|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Address</div><div>{{ lead.address|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">City</div><div>{{ lead.city|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Next follow-up</div><div>{{ lead.next_followup|default:"—" }}</div></div>
+            </div>
+            {% if lead.notes %}
+                <div class="mt-4 text-sm">
+                    <div class="text-xs text-slate-500 mb-1">Notes</div>
+                    <div class="bg-slate-50 rounded-lg p-3 whitespace-pre-line">{{ lead.notes }}</div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold text-slate-900 mb-3">Activities</h3>
+            <form method="post" action="{% url 'leads:add_activity' lead.pk %}" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+                {% csrf_token %}
+                {{ activity_form.activity_type }}
+                <div class="sm:col-span-2 flex gap-2">{{ activity_form.description }}<button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 rounded-lg">Log</button></div>
+            </form>
+            <div class="divide-y divide-slate-100">
+                {% for a in activities %}
+                <div class="py-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium">{{ a.get_activity_type_display }}</span>
+                        <span class="text-xs text-slate-500">{{ a.created_at|date:"M j, H:i" }}</span>
+                    </div>
+                    <div class="text-slate-600 whitespace-pre-line">{{ a.description }}</div>
+                </div>
+                {% empty %}<div class="text-sm text-slate-500 py-2">No activities logged yet.</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold text-slate-900 mb-3">Lead Status</h3>
+            {% if lead.converted_customer %}
+                <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded text-sm">
+                    Converted to customer:<br>
+                    <a class="font-medium underline" href="{{ lead.converted_customer.get_absolute_url }}">{{ lead.converted_customer.display_name }}</a>
+                </div>
+            {% else %}
+                <a href="{% url 'leads:convert' lead.pk %}" class="block text-center bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg">Convert to Customer</a>
+            {% endif %}
+            <div class="mt-3 text-xs text-slate-500">Created {{ lead.created_at|date:"M j, Y" }} by {{ lead.created_by|default:"system" }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

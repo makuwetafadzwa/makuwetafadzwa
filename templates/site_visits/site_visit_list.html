@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block page_title %}Site Visits{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'site_visits:create' %}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">+ Schedule Visit</a>
+{% endblock %}
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-600">
+            <tr><th class="text-left px-4 py-3">Date</th><th class="text-left px-4 py-3">Customer</th><th class="text-left px-4 py-3">Site</th><th class="text-left px-4 py-3">Assigned</th><th class="text-left px-4 py-3">Status</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for v in visits %}
+            <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{{ v.get_absolute_url }}'">
+                <td class="px-4 py-3">{{ v.scheduled_date|date:"M j, Y H:i" }}</td>
+                <td class="px-4 py-3 font-medium">{{ v.customer.display_name }}</td>
+                <td class="px-4 py-3 truncate max-w-[200px]">{{ v.site_address }}</td>
+                <td class="px-4 py-3">{{ v.assigned_to|default:"—" }}</td>
+                <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full
+                    {% if v.status == 'completed' %}bg-emerald-50 text-emerald-700
+                    {% elif v.status == 'cancelled' %}bg-rose-50 text-rose-700
+                    {% else %}bg-sky-50 text-sky-700{% endif %}">{{ v.get_status_display }}</span></td>
+            </tr>
+            {% empty %}<tr><td colspan="5">{% include "partials/empty_state.html" with title="No site visits yet." action_url='/site-visits/new/' action_label="Schedule visit" %}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

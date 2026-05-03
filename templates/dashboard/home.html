@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Overview{% endblock %}
+{% block page_title %}Welcome back, {{ user.first_name|default:user.username }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div class="text-xs text-slate-500 uppercase tracking-wider">Total Leads</div>
+        <div class="text-2xl font-semibold mt-1">{{ total_leads }}</div>
+        <div class="text-xs text-emerald-600 mt-1">{{ won_leads }} won · {{ conversion_rate }}% conversion</div>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div class="text-xs text-slate-500 uppercase tracking-wider">Active Jobs</div>
+        <div class="text-2xl font-semibold mt-1">{{ active_jobs }}</div>
+        <div class="text-xs text-slate-500 mt-1">{{ completed_jobs }} completed</div>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div class="text-xs text-slate-500 uppercase tracking-wider">Revenue (this month)</div>
+        <div class="text-2xl font-semibold mt-1">{{ company.currency_symbol|default:"$" }}{{ revenue_this_month|floatformat:2|intcomma }}</div>
+        <div class="text-xs text-slate-500 mt-1">{{ pending_quotes }} quotes pending</div>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div class="text-xs text-slate-500 uppercase tracking-wider">Outstanding Payments</div>
+        <div class="text-2xl font-semibold mt-1 text-rose-600">{{ company.currency_symbol|default:"$" }}{{ outstanding|floatformat:2|intcomma }}</div>
+        <div class="text-xs text-slate-500 mt-1">across all open invoices</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Pipeline -->
+    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-900">Lead Pipeline</h3>
+            <a href="{% url 'leads:list' %}" class="text-xs text-brand-600 hover:underline">View all</a>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {% for entry in leads_by_status %}
+            <div class="bg-slate-50 rounded-lg p-3">
+                <div class="text-xs text-slate-500 uppercase">{{ entry.status }}</div>
+                <div class="text-xl font-semibold mt-1">{{ entry.count }}</div>
+            </div>
+            {% empty %}
+                <div class="col-span-full text-sm text-slate-500">No leads yet.</div>
+            {% endfor %}
+        </div>
+
+        <h3 class="font-semibold text-slate-900 mt-6 mb-3">Recent Leads</h3>
+        <div class="divide-y divide-slate-100">
+            {% for lead in recent_leads %}
+            <a href="{{ lead.get_absolute_url }}" class="flex items-center justify-between py-2 hover:bg-slate-50 px-2 rounded">
+                <div>
+                    <div class="font-medium text-slate-800 text-sm">{{ lead.full_name }}</div>
+                    <div class="text-xs text-slate-500">{{ lead.get_product_interest_display }} · {{ lead.get_source_display }}</div>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">{{ lead.get_status_display }}</span>
+            </a>
+            {% empty %}<div class="text-sm text-slate-500 py-2">No recent leads.</div>{% endfor %}
+        </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-900">Upcoming Site Visits</h3>
+                <a href="{% url 'site_visits:list' %}" class="text-xs text-brand-600 hover:underline">All</a>
+            </div>
+            <div class="space-y-2">
+                {% for visit in upcoming_visits %}
+                <a href="{{ visit.get_absolute_url }}" class="block px-3 py-2 rounded-lg hover:bg-slate-50">
+                    <div class="text-sm font-medium">{{ visit.customer.display_name }}</div>
+                    <div class="text-xs text-slate-500">{{ visit.scheduled_date|date:"D, M j · H:i" }}</div>
+                </a>
+                {% empty %}<div class="text-sm text-slate-500">No upcoming visits.</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-900">Low-Stock Items</h3>
+                <a href="{% url 'inventory:product_list' %}?low=1" class="text-xs text-brand-600 hover:underline">View</a>
+            </div>
+            <div class="space-y-2">
+                {% for p in low_stock_products %}
+                <div class="flex items-center justify-between text-sm">
+                    <a href="{{ p.get_absolute_url }}" class="text-slate-700 hover:underline truncate mr-2">{{ p.name }}</a>
+                    <span class="text-rose-600 font-medium">{{ p.stock_quantity|floatformat:2 }} {{ p.unit }}</span>
+                </div>
+                {% empty %}<div class="text-sm text-slate-500">All items in stock.</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-900">Recent Jobs</h3>
+                <a href="{% url 'jobs:list' %}" class="text-xs text-brand-600 hover:underline">All</a>
+            </div>
+            <div class="space-y-2">
+                {% for job in recent_jobs %}
+                <a href="{{ job.get_absolute_url }}" class="block px-3 py-2 rounded-lg hover:bg-slate-50">
+                    <div class="text-sm font-medium">{{ job.title }}</div>
+                    <div class="text-xs text-slate-500">{{ job.customer.display_name }} · {{ job.get_status_display }}</div>
+                </a>
+                {% empty %}<div class="text-sm text-slate-500">No jobs yet.</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

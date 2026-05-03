@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block page_title %}{{ project.name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'customers:project_edit' project.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+{% endblock %}
+{% block content %}
+<div class="bg-white border border-slate-200 rounded-xl p-5 max-w-3xl">
+    <div class="grid grid-cols-2 gap-4 text-sm">
+        <div><div class="text-xs text-slate-500">Customer</div><a class="text-brand-600 hover:underline" href="{{ project.customer.get_absolute_url }}">{{ project.customer.display_name }}</a></div>
+        <div><div class="text-xs text-slate-500">Status</div><div>{{ project.get_status_display }}</div></div>
+        <div class="col-span-2"><div class="text-xs text-slate-500">Site address</div><div>{{ project.site_address|default:"—" }}, {{ project.site_city|default:"" }}</div></div>
+        <div><div class="text-xs text-slate-500">Expected start</div><div>{{ project.expected_start|default:"—" }}</div></div>
+        <div><div class="text-xs text-slate-500">Expected completion</div><div>{{ project.expected_completion|default:"—" }}</div></div>
+    </div>
+    {% if project.description %}<div class="mt-4 text-sm bg-slate-50 p-3 rounded">{{ project.description|linebreaks }}</div>{% endif %}
+</div>
+{% endblock %}

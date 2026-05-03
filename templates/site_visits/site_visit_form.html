@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block page_title %}{% if object %}Edit{% else %}Schedule{% endif %} site visit{% endblock %}
+{% block content %}{% include "partials/form_card.html" with title="Site visit details" action_label="Save visit" cancel_url='/site-visits/' %}{% endblock %}

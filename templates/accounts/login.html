@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+
+{% block public_content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-brand-700 p-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold">A</div>
+            <div>
+                <div class="text-lg font-semibold text-slate-900">{{ company.name|default:"Aluflow CRM" }}</div>
+                <div class="text-xs text-slate-500">Glass & Aluminium Sales / Operations</div>
+            </div>
+        </div>
+        <h1 class="text-xl font-semibold text-slate-900">Sign in to your account</h1>
+        <p class="text-sm text-slate-500 mb-6">Enter your credentials to access the dashboard.</p>
+
+        {% include "partials/messages.html" %}
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded text-sm">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Username</label>
+                {{ form.username }}
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Password</label>
+                {{ form.password }}
+            </div>
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg shadow-sm">
+                Sign in
+            </button>
+        </form>
+        <p class="text-xs text-slate-400 text-center mt-6">Need an account? Contact your administrator.</p>
+    </div>
+</div>
+{% endblock %}

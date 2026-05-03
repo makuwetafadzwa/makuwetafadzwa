@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}Sales Report{% endblock %}
+{% block content %}
+{% include "reports/_date_filter.html" %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Leads</div><div class="text-2xl font-semibold">{{ lead_count }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Won</div><div class="text-2xl font-semibold text-emerald-600">{{ leads_won }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Lost</div><div class="text-2xl font-semibold text-rose-600">{{ leads_lost }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Quotations</div><div class="text-2xl font-semibold">{{ quote_count }}</div></div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-5">
+        <h3 class="font-semibold mb-3">Leads by source</h3>
+        <table class="w-full text-sm">
+            <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-1">Source</th><th class="text-right py-1">Leads</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+            {% for entry in leads_by_source %}<tr><td class="py-1.5 capitalize">{{ entry.source }}</td><td class="text-right">{{ entry.count }}</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-5">
+        <h3 class="font-semibold mb-3">Pipeline value</h3>
+        <div class="text-sm space-y-2">
+            <div class="flex justify-between"><span>Approved quotes</span><span class="font-medium">{{ approved_quotes }}</span></div>
+            <div class="flex justify-between"><span>Jobs created (period)</span><span class="font-medium">{{ jobs_count }}</span></div>
+            <div class="flex justify-between"><span>Job value</span><span class="font-medium">{{ company.currency_symbol|default:"$" }}{{ jobs_won_value|floatformat:2|intcomma }}</span></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

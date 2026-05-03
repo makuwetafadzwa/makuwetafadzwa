@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block page_title %}Installations{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'installations:team_list' %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Teams</a>
+<a href="{% url 'installations:create' %}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">+ Schedule</a>
+{% endblock %}
+{% block content %}
+<div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-600"><tr><th class="text-left px-4 py-3">Date</th><th class="text-left px-4 py-3">Job</th><th class="text-left px-4 py-3">Customer</th><th class="text-left px-4 py-3">Team</th><th class="text-left px-4 py-3">Status</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+        {% for ins in installations %}
+            <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{{ ins.get_absolute_url }}'">
+                <td class="px-4 py-3">{{ ins.scheduled_date|date:"M j, Y H:i" }}</td>
+                <td class="px-4 py-3">{{ ins.job.job_number }}</td>
+                <td class="px-4 py-3">{{ ins.job.customer.display_name }}</td>
+                <td class="px-4 py-3">{{ ins.team|default:"—" }}</td>
+                <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full bg-slate-100">{{ ins.get_status_display }}</span></td>
+            </tr>
+        {% empty %}<tr><td colspan="5">{% include "partials/empty_state.html" with title="No installations." %}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

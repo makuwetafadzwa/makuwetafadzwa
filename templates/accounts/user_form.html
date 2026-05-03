@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit{% else %}New{% endif %} User{% endblock %}
+{% block breadcrumb %}Admin / Users{% endblock %}
+{% block page_title %}{% if object %}Edit user{% else %}Create user{% endif %}{% endblock %}
+
+{% block content %}
+{% include "partials/form_card.html" with title="User details" action_label="Save user" cancel_url='/accounts/users/' multipart=True %}
+{% endblock %}

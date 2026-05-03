@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit{% else %}New{% endif %} Lead{% endblock %}
+{% block page_title %}{% if object %}Edit lead{% else %}Create lead{% endif %}{% endblock %}
+{% block content %}
+{% include "partials/form_card.html" with title="Lead details" action_label="Save lead" cancel_url='/leads/' %}
+{% endblock %}

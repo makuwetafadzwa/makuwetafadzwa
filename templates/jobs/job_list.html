@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}Jobs / Orders{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'jobs:create' %}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">+ New Job</a>
+{% endblock %}
+{% block content %}
+<form method="get" class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex gap-2 mb-4">
+    <select name="status" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <option value="">All statuses</option>
+        {% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+    <button class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">Filter</button>
+</form>
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-600">
+            <tr><th class="text-left px-4 py-3">Job</th><th class="text-left px-4 py-3">Customer</th><th class="text-left px-4 py-3">Status</th><th class="text-left px-4 py-3">Start</th><th class="text-right px-4 py-3">Value</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for j in jobs %}
+            <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{{ j.get_absolute_url }}'">
+                <td class="px-4 py-3"><div class="font-medium">{{ j.job_number }}</div><div class="text-xs text-slate-500">{{ j.title }}</div></td>
+                <td class="px-4 py-3">{{ j.customer.display_name }}</td>
+                <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full
+                    {% if j.status == 'completed' %}bg-emerald-50 text-emerald-700
+                    {% elif j.status == 'cancelled' %}bg-rose-50 text-rose-700
+                    {% elif j.status == 'fabrication' %}bg-amber-50 text-amber-700
+                    {% elif j.status == 'installed' %}bg-sky-50 text-sky-700
+                    {% else %}bg-slate-100 text-slate-700{% endif %}">{{ j.get_status_display }}</span></td>
+                <td class="px-4 py-3">{{ j.start_date|default:"—" }}</td>
+                <td class="px-4 py-3 text-right font-mono">{{ company.currency_symbol|default:"$" }}{{ j.contract_value|floatformat:2|intcomma }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="5">{% include "partials/empty_state.html" with title="No jobs yet." %}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

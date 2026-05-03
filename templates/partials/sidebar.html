@@ -1,0 +1,85 @@
+{% load static %}
+<aside class="hidden md:flex md:flex-col w-64 bg-slate-900 text-slate-100 shadow-xl">
+    <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
+        <div class="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold">
+            A
+        </div>
+        <div class="leading-tight">
+            <div class="font-semibold">{{ company.name|default:"Aluflow CRM" }}</div>
+            <div class="text-xs text-slate-400">Sales & Ops</div>
+        </div>
+    </div>
+
+    <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin">
+        {% url 'dashboard:home' as url_dash %}
+        <a href="{{ url_dash }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if request.path == url_dash %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">📊</span> Dashboard
+        </a>
+
+        <div class="pt-3 px-3 text-[11px] uppercase tracking-wider text-slate-500">Sales</div>
+        <a href="{% url 'leads:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/leads/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">🎯</span> Leads
+        </a>
+        <a href="{% url 'customers:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/customers/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">👤</span> Customers
+        </a>
+        <a href="{% url 'site_visits:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/site-visits/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">📐</span> Site Visits
+        </a>
+        <a href="{% url 'quotations:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/quotations/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">📄</span> Quotations
+        </a>
+
+        <div class="pt-3 px-3 text-[11px] uppercase tracking-wider text-slate-500">Operations</div>
+        <a href="{% url 'jobs:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/jobs/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">🔧</span> Jobs / Orders
+        </a>
+        <a href="{% url 'installations:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/installations/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">🏗️</span> Installations
+        </a>
+        <a href="{% url 'inventory:product_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/inventory/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">📦</span> Inventory
+        </a>
+        <a href="{% url 'inventory:supplier_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/suppliers/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">🚚</span> Suppliers
+        </a>
+        <a href="{% url 'inventory:po_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/purchase-orders/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">🧾</span> Purchase Orders
+        </a>
+
+        <div class="pt-3 px-3 text-[11px] uppercase tracking-wider text-slate-500">Finance</div>
+        <a href="{% url 'finance:invoice_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/invoices/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">💵</span> Invoices
+        </a>
+        <a href="{% url 'finance:payment_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/payments/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">💳</span> Payments
+        </a>
+
+        <div class="pt-3 px-3 text-[11px] uppercase tracking-wider text-slate-500">Insights</div>
+        <a href="{% url 'reports:home' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/reports/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">📈</span> Reports
+        </a>
+
+        {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+        <div class="pt-3 px-3 text-[11px] uppercase tracking-wider text-slate-500">Admin</div>
+        <a href="{% url 'company_settings:home' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/settings/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">⚙️</span> Settings
+        </a>
+        <a href="{% url 'accounts:user_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/users/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">👥</span> Users
+        </a>
+        {% endif %}
+    </nav>
+
+    <div class="px-3 py-3 border-t border-slate-800">
+        <a href="{% url 'accounts:profile' %}" class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-800">
+            <div class="w-8 h-8 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center font-bold">
+                {{ user.initials }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium truncate">{{ user.get_full_name|default:user.username }}</div>
+                <div class="text-xs text-slate-400 capitalize">{{ user.get_role_display }}</div>
+            </div>
+        </a>
+    </div>
+</aside>

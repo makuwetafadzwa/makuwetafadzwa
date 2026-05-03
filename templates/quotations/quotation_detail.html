@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}{{ quotation.quote_number }} v{{ quotation.version }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'quotations:pdf' quotation.pk %}" target="_blank" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">📄 PDF</a>
+{% if quotation.is_editable %}
+<a href="{% url 'quotations:items' quotation.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Items</a>
+<a href="{% url 'quotations:edit' quotation.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+{% endif %}
+<a href="{% url 'quotations:revise' quotation.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">+ New version</a>
+{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><div class="text-xs text-slate-500">Customer</div><a class="text-brand-600 hover:underline" href="{{ quotation.customer.get_absolute_url }}">{{ quotation.customer.display_name }}</a></div>
+                <div><div class="text-xs text-slate-500">Project</div><div>{{ quotation.project.name|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Issue date</div><div>{{ quotation.issue_date }}</div></div>
+                <div><div class="text-xs text-slate-500">Valid until</div><div>{{ quotation.valid_until|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Status</div><div>{{ quotation.get_status_display }}</div></div>
+                <div><div class="text-xs text-slate-500">VAT %</div><div>{{ quotation.tax_percent }}</div></div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Line items</h3>
+            <table class="w-full text-sm">
+                <thead class="text-xs uppercase text-slate-500">
+                    <tr><th class="text-left py-1">Description</th><th class="text-left py-1">Size</th><th class="text-right py-1">Qty</th><th class="text-right py-1">Unit</th><th class="text-right py-1">Total</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                {% for item in quotation.items.all %}
+                    <tr>
+                        <td class="py-2">{{ item.description }}</td>
+                        <td>{% if item.width_mm %}{{ item.width_mm }}×{{ item.height_mm }}{% else %}—{% endif %}</td>
+                        <td class="text-right">{{ item.quantity|floatformat:"-2" }}</td>
+                        <td class="text-right">{{ company.currency_symbol|default:"$" }}{{ item.unit_price|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ company.currency_symbol|default:"$" }}{{ item.line_total|floatformat:2|intcomma }}</td>
+                    </tr>
+                {% empty %}<tr><td colspan="5" class="py-3 text-slate-500 text-center">No items.</td></tr>{% endfor %}
+                </tbody>
+                <tfoot class="text-sm">
+                    <tr><td colspan="4" class="text-right py-1">Subtotal</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ quotation.subtotal|floatformat:2|intcomma }}</td></tr>
+                    <tr><td colspan="4" class="text-right py-1">Discount ({{ quotation.discount_percent }}%)</td><td class="text-right">-{{ company.currency_symbol|default:"$" }}{{ quotation.discount_amount|floatformat:2|intcomma }}</td></tr>
+                    <tr><td colspan="4" class="text-right py-1">VAT ({{ quotation.tax_percent }}%)</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ quotation.tax_amount|floatformat:2|intcomma }}</td></tr>
+                    <tr class="font-semibold border-t border-slate-200"><td colspan="4" class="text-right py-2">Grand total</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ quotation.grand_total|floatformat:2|intcomma }}</td></tr>
+                </tfoot>
+            </table>
+        </div>
+
+        {% if quotation.terms %}
+        <div class="bg-white border border-slate-200 rounded-xl p-5 text-sm">
+            <h3 class="font-semibold mb-2">Terms</h3>
+            <div class="whitespace-pre-line text-slate-600">{{ quotation.terms }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 space-y-2">
+            <h3 class="font-semibold mb-2">Status actions</h3>
+            {% if quotation.status == 'draft' %}
+                <a href="{% url 'quotations:send' quotation.pk %}" class="block text-center bg-sky-600 hover:bg-sky-700 text-white text-sm px-4 py-2 rounded-lg">Mark as Sent</a>
+            {% endif %}
+            {% if quotation.status == 'sent' or quotation.status == 'draft' %}
+                <a href="{% url 'quotations:approve' quotation.pk %}" class="block text-center bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg">Approve & Create Job</a>
+                <a href="{% url 'quotations:reject' quotation.pk %}" class="block text-center bg-rose-600 hover:bg-rose-700 text-white text-sm px-4 py-2 rounded-lg">Reject</a>
+            {% endif %}
+            <a href="{% url 'quotations:pdf' quotation.pk %}" target="_blank" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm px-4 py-2 rounded-lg">Download PDF</a>
+        </div>
+
+        {% if quotation.versions.exists or quotation.parent %}
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-2">Versions</h3>
+            <div class="space-y-1 text-sm">
+                {% with base=quotation.parent|default:quotation %}
+                    <a href="{{ base.get_absolute_url }}" class="block px-2 py-1 rounded hover:bg-slate-50">{{ base.quote_number }} v{{ base.version }} (original)</a>
+                    {% for v in base.versions.all %}
+                        <a href="{{ v.get_absolute_url }}" class="block px-2 py-1 rounded hover:bg-slate-50">{{ v.quote_number }} v{{ v.version }}</a>
+                    {% endfor %}
+                {% endwith %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

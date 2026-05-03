@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block page_title %}Reports{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <a href="{% url 'reports:sales' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
+        <div class="text-3xl">📈</div>
+        <div class="font-semibold mt-2">Sales Report</div>
+        <div class="text-sm text-slate-500">Leads, conversions and quotation pipeline.</div>
+    </a>
+    <a href="{% url 'reports:jobs' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
+        <div class="text-3xl">🛠️</div>
+        <div class="font-semibold mt-2">Jobs Report</div>
+        <div class="text-sm text-slate-500">Job completion and contract values.</div>
+    </a>
+    <a href="{% url 'reports:finance' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
+        <div class="text-3xl">💵</div>
+        <div class="font-semibold mt-2">Finance Report</div>
+        <div class="text-sm text-slate-500">Revenue, payments and outstanding amounts.</div>
+    </a>
+    <a href="{% url 'reports:inventory' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
+        <div class="text-3xl">📦</div>
+        <div class="font-semibold mt-2">Inventory Report</div>
+        <div class="text-sm text-slate-500">Stock levels, movements and value.</div>
+    </a>
+</div>
+{% endblock %}

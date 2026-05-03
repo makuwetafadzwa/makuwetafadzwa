@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}Finance Report{% endblock %}
+{% block content %}
+{% include "reports/_date_filter.html" %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Payments collected</div><div class="text-2xl font-semibold text-emerald-600">{{ company.currency_symbol|default:"$" }}{{ payments_total|floatformat:2|intcomma }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Invoices issued</div><div class="text-2xl font-semibold">{{ invoice_count }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Invoiced value</div><div class="text-2xl font-semibold">{{ company.currency_symbol|default:"$" }}{{ invoiced_value|floatformat:2|intcomma }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Outstanding</div><div class="text-2xl font-semibold text-rose-600">{{ company.currency_symbol|default:"$" }}{{ outstanding|floatformat:2|intcomma }}</div></div>
+</div>
+<div class="bg-white border border-slate-200 rounded-xl p-5">
+    <h3 class="font-semibold mb-3">Payments by method</h3>
+    <table class="w-full text-sm">
+        <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-1">Method</th><th class="text-right py-1">Count</th><th class="text-right py-1">Total</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+        {% for entry in by_method %}
+            <tr><td class="py-1.5 capitalize">{{ entry.method }}</td><td class="text-right">{{ entry.count }}</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ entry.total|floatformat:2|intcomma }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="py-2 text-slate-500">No payments in range.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

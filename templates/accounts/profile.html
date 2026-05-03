@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block breadcrumb %}Account{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+{% include "partials/form_card.html" with title="Update profile" action_label="Save profile" cancel_url=request.path multipart=True %}
+{% endblock %}
