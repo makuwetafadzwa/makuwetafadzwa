@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block page_title %}{% if object %}Edit{% else %}New{% endif %} invoice{% endblock %}
+{% block content %}{% include "partials/form_card.html" with title="Invoice" action_label="Save & continue" cancel_url='/finance/invoices/' %}{% endblock %}

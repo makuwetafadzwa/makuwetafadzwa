@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}PO {{ po.po_number }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'inventory:po_lines' po.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Lines</a>
+<a href="{% url 'inventory:po_edit' po.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+{% if po.status != 'received' %}<a href="{% url 'inventory:po_receive' po.pk %}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-2 rounded-lg">Receive Stock</a>{% endif %}
+{% endblock %}
+{% block content %}
+<div class="bg-white border border-slate-200 rounded-xl p-5 mb-4">
+    <div class="grid grid-cols-2 gap-3 text-sm">
+        <div><div class="text-xs text-slate-500">Supplier</div><div class="font-medium">{{ po.supplier }}</div></div>
+        <div><div class="text-xs text-slate-500">Order date</div><div>{{ po.order_date }}</div></div>
+        <div><div class="text-xs text-slate-500">Expected</div><div>{{ po.expected_date|default:"—" }}</div></div>
+        <div><div class="text-xs text-slate-500">Status</div><div>{{ po.get_status_display }}</div></div>
+    </div>
+    {% if po.notes %}<div class="mt-3 bg-slate-50 p-3 rounded text-sm">{{ po.notes|linebreaks }}</div>{% endif %}
+</div>
+<div class="bg-white border border-slate-200 rounded-xl p-5">
+    <h3 class="font-semibold mb-3">Lines</h3>
+    <table class="w-full text-sm">
+        <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-1">Product</th><th class="text-right py-1">Qty</th><th class="text-right py-1">Received</th><th class="text-right py-1">Unit</th><th class="text-right py-1">Total</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+        {% for line in po.lines.all %}
+            <tr><td class="py-1.5">{{ line.product.name }}</td><td class="text-right">{{ line.quantity|floatformat:"-2" }}</td><td class="text-right">{{ line.received_quantity|floatformat:"-2" }}</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ line.unit_cost|floatformat:2|intcomma }}</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ line.line_total|floatformat:2|intcomma }}</td></tr>
+        {% empty %}<tr><td colspan="5" class="py-3 text-slate-500 text-center">No lines.</td></tr>{% endfor %}
+        </tbody>
+        <tfoot class="text-sm border-t border-slate-200">
+            <tr class="font-semibold"><td colspan="4" class="text-right py-2">Total</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ po.total|floatformat:2|intcomma }}</td></tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

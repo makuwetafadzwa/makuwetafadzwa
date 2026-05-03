@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block page_title %}PO Lines · {{ po.po_number }}{% endblock %}
+{% block content %}
+<form method="post" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+    {% csrf_token %}{{ formset.management_form }}
+    <table class="w-full text-sm">
+        <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-2">Product</th><th>Qty</th><th>Unit Cost</th><th>Received</th><th>Delete</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+        {% for f in formset %}
+        <tr>
+            <td class="py-2 pr-2">{{ f.product }}{{ f.id }}</td>
+            <td class="pr-2">{{ f.quantity }}</td>
+            <td class="pr-2">{{ f.unit_cost }}</td>
+            <td class="pr-2">{{ f.received_quantity }}</td>
+            <td>{{ f.DELETE }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="mt-4 flex gap-2">
+        <button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">Save lines</button>
+        <a href="{{ po.get_absolute_url }}" class="text-sm border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">Cancel</a>
+    </div>
+</form>
+{% endblock %}

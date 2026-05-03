@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}Payments{% endblock %}
+{% block content %}
+<div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-600"><tr><th class="text-left px-4 py-3">Date</th><th class="text-left px-4 py-3">Invoice</th><th class="text-left px-4 py-3">Customer</th><th class="text-left px-4 py-3">Method</th><th class="text-right px-4 py-3">Amount</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+        {% for p in payments %}
+        <tr><td class="px-4 py-3">{{ p.payment_date }}</td><td class="px-4 py-3"><a class="text-brand-600 hover:underline" href="{{ p.invoice.get_absolute_url }}">{{ p.invoice.invoice_number }}</a></td><td class="px-4 py-3">{{ p.invoice.customer.display_name }}</td><td class="px-4 py-3">{{ p.get_method_display }}</td><td class="px-4 py-3 text-right font-mono">{{ company.currency_symbol|default:"$" }}{{ p.amount|floatformat:2|intcomma }}</td></tr>
+        {% empty %}<tr><td colspan="5">{% include "partials/empty_state.html" with title="No payments yet." %}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

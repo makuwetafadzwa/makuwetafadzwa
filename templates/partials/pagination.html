@@ -1,0 +1,13 @@
+{% if is_paginated %}
+<nav class="flex items-center justify-between mt-4 text-sm">
+    <div class="text-slate-500">Page {{ page_obj.number }} of {{ paginator.num_pages }} · {{ paginator.count }} record{{ paginator.count|pluralize }}</div>
+    <div class="flex gap-1">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50">Previous</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50">Next</a>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}

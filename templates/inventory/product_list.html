@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}Inventory{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'inventory:category_list' %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Categories</a>
+<a href="{% url 'inventory:product_create' %}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">+ New Product</a>
+{% endblock %}
+{% block content %}
+<form method="get" class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex gap-2 mb-4">
+    <input name="q" value="{{ request.GET.q }}" placeholder="Search SKU / name" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+    <select name="category" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <option value="">All categories</option>
+        {% for c in categories %}<option value="{{ c.id }}" {% if request.GET.category == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="low" value="1" {% if request.GET.low %}checked{% endif %}> Low stock only</label>
+    <button class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">Filter</button>
+</form>
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-600">
+            <tr><th class="text-left px-4 py-3">SKU</th><th class="text-left px-4 py-3">Name</th><th class="text-left px-4 py-3">Category</th><th class="text-left px-4 py-3">Unit</th><th class="text-right px-4 py-3">Stock</th><th class="text-right px-4 py-3">Reorder</th><th class="text-right px-4 py-3">Selling</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for p in products %}
+            <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{{ p.get_absolute_url }}'">
+                <td class="px-4 py-3 font-mono text-xs">{{ p.sku }}</td>
+                <td class="px-4 py-3 font-medium">{{ p.name }}</td>
+                <td class="px-4 py-3">{{ p.category.name|default:"—" }}</td>
+                <td class="px-4 py-3">{{ p.get_unit_display }}</td>
+                <td class="px-4 py-3 text-right {% if p.is_low_stock %}text-rose-600 font-semibold{% endif %}">{{ p.stock_quantity|floatformat:"-2" }}</td>
+                <td class="px-4 py-3 text-right text-slate-500">{{ p.reorder_level|floatformat:"-2" }}</td>
+                <td class="px-4 py-3 text-right">{{ company.currency_symbol|default:"$" }}{{ p.selling_price|floatformat:2|intcomma }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="7">{% include "partials/empty_state.html" with title="No products yet." action_url='/inventory/new/' action_label="Add product" %}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

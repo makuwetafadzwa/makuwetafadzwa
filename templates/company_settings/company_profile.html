@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block page_title %}Company profile{% endblock %}
+{% block content %}
+{% include "partials/form_card.html" with title="Company profile" action_label="Save" cancel_url='/settings/' multipart=True %}
+{% endblock %}

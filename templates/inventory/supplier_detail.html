@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block page_title %}{{ supplier.name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'inventory:supplier_edit' supplier.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+<a href="{% url 'inventory:supplier_delete' supplier.pk %}" class="text-sm border border-rose-200 text-rose-600 px-3 py-2 rounded-lg hover:bg-rose-50">Delete</a>
+{% endblock %}
+{% block content %}
+<div class="bg-white border border-slate-200 rounded-xl p-5 max-w-3xl">
+    <div class="grid grid-cols-2 gap-3 text-sm">
+        <div><div class="text-xs text-slate-500">Contact person</div><div>{{ supplier.contact_person|default:"—" }}</div></div>
+        <div><div class="text-xs text-slate-500">Phone</div><div>{{ supplier.phone|default:"—" }}</div></div>
+        <div><div class="text-xs text-slate-500">Email</div><div>{{ supplier.email|default:"—" }}</div></div>
+        <div><div class="text-xs text-slate-500">Payment terms</div><div>{{ supplier.payment_terms|default:"—" }}</div></div>
+        <div class="col-span-2"><div class="text-xs text-slate-500">Address</div><div>{{ supplier.address }}, {{ supplier.city }}, {{ supplier.country }}</div></div>
+    </div>
+    {% if supplier.notes %}<div class="mt-4 text-sm bg-slate-50 p-3 rounded">{{ supplier.notes|linebreaks }}</div>{% endif %}
+</div>
+{% endblock %}

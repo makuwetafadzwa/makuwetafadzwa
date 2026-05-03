@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block page_title %}Convert lead to customer{% endblock %}
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-w-2xl">
+    <h3 class="text-lg font-semibold mb-1">Convert {{ lead.full_name }}</h3>
+    <p class="text-sm text-slate-500 mb-5">A new customer record will be created using the lead's contact details.</p>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="flex items-center gap-2 text-sm">
+                {{ field }}
+                <span>{{ field.label }}</span>
+            </label>
+            {% if field.help_text %}<p class="text-xs text-slate-400">{{ field.help_text }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="flex gap-2">
+            <button class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg">Convert</button>
+            <a href="{{ lead.get_absolute_url }}" class="text-sm text-slate-600 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

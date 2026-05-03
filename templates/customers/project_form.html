@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block page_title %}{% if object %}Edit{% else %}New{% endif %} project{% endblock %}
+{% block content %}{% include "partials/form_card.html" with title="Project details" action_label="Save" cancel_url='/customers/projects/' %}{% endblock %}

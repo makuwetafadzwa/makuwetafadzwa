@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block page_title %}Site Visit · {{ visit.customer.display_name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'site_visits:edit' visit.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+<a href="{% url 'site_visits:measurements' visit.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">📐 Measurements</a>
+{% if visit.status != 'completed' %}
+<a href="{% url 'site_visits:complete' visit.pk %}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-2 rounded-lg">Mark Completed</a>
+{% endif %}
+{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><div class="text-xs text-slate-500">Customer</div><a class="text-brand-600 hover:underline" href="{{ visit.customer.get_absolute_url }}">{{ visit.customer.display_name }}</a></div>
+                <div><div class="text-xs text-slate-500">Project</div><div>{{ visit.project.name|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Scheduled</div><div>{{ visit.scheduled_date|date:"M j, Y H:i" }}</div></div>
+                <div><div class="text-xs text-slate-500">Assigned to</div><div>{{ visit.assigned_to|default:"—" }}</div></div>
+                <div class="col-span-2"><div class="text-xs text-slate-500">Site address</div><div>{{ visit.site_address }}</div></div>
+                <div><div class="text-xs text-slate-500">Contact on site</div><div>{{ visit.contact_person|default:"—" }} · {{ visit.contact_phone }}</div></div>
+                <div><div class="text-xs text-slate-500">Status</div><div>{{ visit.get_status_display }}</div></div>
+            </div>
+            {% if visit.notes %}<div class="mt-3 text-sm bg-slate-50 rounded p-3">{{ visit.notes|linebreaks }}</div>{% endif %}
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-900">Measurements</h3>
+                <a href="{% url 'site_visits:measurements' visit.pk %}" class="text-sm text-brand-600 hover:underline">Manage</a>
+            </div>
+            <table class="w-full text-sm">
+                <thead class="text-xs uppercase text-slate-500">
+                    <tr><th class="text-left py-1">Location</th><th class="text-left py-1">Product</th><th class="text-left py-1">Size (mm)</th><th class="text-left py-1">Qty</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                {% for m in measurements %}
+                    <tr><td class="py-1.5">{{ m.location_label }}</td><td>{{ m.get_product_type_display }}</td><td>{{ m.width_mm }}×{{ m.height_mm }}</td><td>{{ m.quantity }}</td></tr>
+                {% empty %}<tr><td colspan="4" class="py-3 text-slate-500">No measurements yet.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold text-slate-900 mb-3">Photos</h3>
+            <form method="post" action="{% url 'site_visits:upload_image' visit.pk %}" enctype="multipart/form-data" class="flex gap-2 mb-3">
+                {% csrf_token %}
+                {{ image_form.image }}{{ image_form.caption }}
+                <button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 rounded-lg">Upload</button>
+            </form>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {% for img in images %}
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <img src="{{ img.image.url }}" class="w-full h-32 object-cover" alt="{{ img.caption }}">
+                    {% if img.caption %}<div class="px-2 py-1 text-xs text-slate-600">{{ img.caption }}</div>{% endif %}
+                </div>
+                {% empty %}<div class="text-sm text-slate-500 col-span-full">No photos uploaded.</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold text-slate-900 mb-3">Next Step</h3>
+            <a href="{% url 'quotations:create' %}" class="block text-center bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg">📄 Create Quotation</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

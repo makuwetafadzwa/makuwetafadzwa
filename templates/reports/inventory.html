@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}Inventory Report{% endblock %}
+{% block content %}
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Total SKUs</div><div class="text-2xl font-semibold">{{ total_skus }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Low stock items</div><div class="text-2xl font-semibold text-rose-600">{{ low_stock|length }}</div></div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4"><div class="text-xs text-slate-500">Stock value</div><div class="text-2xl font-semibold">{{ company.currency_symbol|default:"$" }}{{ stock_value|floatformat:2|intcomma }}</div></div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-5">
+        <h3 class="font-semibold mb-3">Low stock</h3>
+        <table class="w-full text-sm">
+            <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-1">Product</th><th class="text-right py-1">Stock</th><th class="text-right py-1">Reorder</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+            {% for p in low_stock %}<tr><td class="py-1.5">{{ p.name }}</td><td class="text-right text-rose-600">{{ p.stock_quantity|floatformat:"-2" }}</td><td class="text-right">{{ p.reorder_level|floatformat:"-2" }}</td></tr>{% empty %}<tr><td colspan="3" class="py-2 text-slate-500">All in stock.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-5">
+        <h3 class="font-semibold mb-3">Recent movements</h3>
+        <table class="w-full text-sm">
+            <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-1">When</th><th class="text-left py-1">Product</th><th class="text-left py-1">Reason</th><th class="text-right py-1">Δ</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+            {% for m in movements %}<tr><td class="py-1.5">{{ m.created_at|date:"M j" }}</td><td>{{ m.product.name }}</td><td>{{ m.get_reason_display }}</td><td class="text-right {% if m.change < 0 %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ m.change|floatformat:"-2" }}</td></tr>{% empty %}<tr><td colspan="4" class="py-2 text-slate-500">No movements.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

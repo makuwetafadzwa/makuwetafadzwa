@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block page_title %}{% if object %}Edit{% else %}New{% endif %} product{% endblock %}
+{% block content %}{% include "partials/form_card.html" with title="Product details" action_label="Save" cancel_url='/inventory/' %}{% endblock %}

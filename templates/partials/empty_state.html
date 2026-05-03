@@ -1,0 +1,8 @@
+<div class="bg-white border border-dashed border-slate-300 rounded-xl py-10 text-center">
+    <div class="text-4xl mb-2">{{ icon|default:"📭" }}</div>
+    <div class="font-medium text-slate-700">{{ title|default:"Nothing yet." }}</div>
+    {% if subtitle %}<div class="text-sm text-slate-500 mt-1">{{ subtitle }}</div>{% endif %}
+    {% if action_url %}
+        <a href="{{ action_url }}" class="inline-block mt-4 text-sm bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg">{{ action_label|default:"Create" }}</a>
+    {% endif %}
+</div>

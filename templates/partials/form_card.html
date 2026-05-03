@@ -1,0 +1,30 @@
+{# Generic card-form rendering. Expects: form, title, action_label, cancel_url, multipart (bool) #}
+<form method="post" {% if multipart %}enctype="multipart/form-data"{% endif %} class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-w-3xl">
+    {% csrf_token %}
+    <h3 class="text-lg font-semibold mb-4 text-slate-900">{{ title }}</h3>
+    {% if form.non_field_errors %}
+        <div class="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded mb-4 text-sm">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {% for field in form %}
+            <div class="{% if field.field.widget.input_type == 'textarea' or field.name == 'notes' or field.name == 'terms' or field.name == 'description' or field.name == 'completion_notes' or field.name == 'summary' %}sm:col-span-2{% endif %}">
+                <label class="block text-xs font-medium text-slate-600 mb-1">
+                    {{ field.label }}{% if field.field.required %}<span class="text-rose-500">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {% if field.help_text %}<p class="text-xs text-slate-400 mt-1">{{ field.help_text }}</p>{% endif %}
+                {% for err in field.errors %}<p class="text-xs text-rose-600 mt-1">{{ err }}</p>{% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+    <div class="mt-6 flex gap-2">
+        <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm">
+            {{ action_label|default:"Save" }}
+        </button>
+        {% if cancel_url %}
+            <a href="{{ cancel_url }}" class="text-sm text-slate-600 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</a>
+        {% endif %}
+    </div>
+</form>

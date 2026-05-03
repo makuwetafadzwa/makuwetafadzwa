@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block page_title %}Installation · {{ installation.job.job_number }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'installations:edit' installation.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+{% if installation.status != 'completed' %}<a href="{% url 'installations:complete' installation.pk %}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-2 rounded-lg">Mark Complete</a>{% endif %}
+{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 text-sm">
+            <div class="grid grid-cols-2 gap-3">
+                <div><div class="text-xs text-slate-500">Job</div><a class="text-brand-600 hover:underline" href="{{ installation.job.get_absolute_url }}">{{ installation.job.job_number }}</a></div>
+                <div><div class="text-xs text-slate-500">Customer</div><div>{{ installation.job.customer.display_name }}</div></div>
+                <div><div class="text-xs text-slate-500">Scheduled</div><div>{{ installation.scheduled_date|date:"M j, Y H:i" }}</div></div>
+                <div><div class="text-xs text-slate-500">Status</div><div>{{ installation.get_status_display }}</div></div>
+                <div class="col-span-2"><div class="text-xs text-slate-500">Site address</div><div>{{ installation.site_address|default:installation.job.customer.address_line1 }}</div></div>
+                <div><div class="text-xs text-slate-500">Team</div><div>{{ installation.team|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Lead installer</div><div>{{ installation.lead_installer|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Customer signoff</div><div>{% if installation.customer_signoff %}{{ installation.signoff_name }} ✓{% else %}Pending{% endif %}</div></div>
+            </div>
+            {% if installation.notes %}<div class="mt-3 bg-slate-50 p-3 rounded">{{ installation.notes|linebreaks }}</div>{% endif %}
+            {% if installation.completion_notes %}<div class="mt-3 bg-emerald-50 border border-emerald-100 p-3 rounded"><div class="text-xs font-semibold text-emerald-700 mb-1">Completion notes</div>{{ installation.completion_notes|linebreaks }}</div>{% endif %}
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Photos</h3>
+            <form method="post" action="{% url 'installations:upload_image' installation.pk %}" enctype="multipart/form-data" class="flex flex-wrap gap-2 mb-3">
+                {% csrf_token %}{{ image_form.image }}{{ image_form.caption }}
+                <label class="flex items-center gap-2 text-sm">{{ image_form.is_completion }} Completion photo</label>
+                <button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 rounded-lg">Upload</button>
+            </form>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {% for img in images %}
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <img src="{{ img.image.url }}" class="w-full h-32 object-cover" alt="{{ img.caption }}">
+                    <div class="px-2 py-1 text-xs text-slate-600 flex items-center justify-between">
+                        <span>{{ img.caption|default:"" }}</span>
+                        {% if img.is_completion %}<span class="text-emerald-600">✓</span>{% endif %}
+                    </div>
+                </div>
+                {% empty %}<div class="text-sm text-slate-500 col-span-full">No photos uploaded.</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

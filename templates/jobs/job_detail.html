@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}{{ job.job_number }} · {{ job.title }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'jobs:edit' job.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+<a href="{% url 'jobs:materials' job.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">📦 BOM</a>
+{% if not job.materials_deducted %}<a href="{% url 'jobs:deduct' job.pk %}" class="text-sm bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg">Deduct Materials</a>{% endif %}
+<a href="{% url 'installations:create' %}?job={{ job.pk }}" class="text-sm bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded-lg">Schedule Installation</a>
+<a href="{% url 'finance:invoice_create' %}?job={{ job.pk }}" class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg">+ Invoice</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><div class="text-xs text-slate-500">Customer</div><a class="text-brand-600 hover:underline" href="{{ job.customer.get_absolute_url }}">{{ job.customer.display_name }}</a></div>
+                <div><div class="text-xs text-slate-500">Project</div><div>{{ job.project.name|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Quotation</div><div>{% if job.quotation %}<a href="{{ job.quotation.get_absolute_url }}" class="text-brand-600 hover:underline">{{ job.quotation.quote_number }}</a>{% else %}—{% endif %}</div></div>
+                <div><div class="text-xs text-slate-500">Project manager</div><div>{{ job.project_manager|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Start date</div><div>{{ job.start_date|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Target completion</div><div>{{ job.target_completion|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Contract value</div><div class="font-semibold">{{ company.currency_symbol|default:"$" }}{{ job.contract_value|floatformat:2|intcomma }}</div></div>
+                <div><div class="text-xs text-slate-500">Materials deducted</div><div>{% if job.materials_deducted %}Yes{% else %}No{% endif %}</div></div>
+            </div>
+            {% if job.notes %}<div class="mt-4 text-sm bg-slate-50 p-3 rounded">{{ job.notes|linebreaks }}</div>{% endif %}
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Bill of Materials</h3>
+            <table class="w-full text-sm">
+                <thead class="text-xs uppercase text-slate-500">
+                    <tr><th class="text-left py-1">Product</th><th class="text-left py-1">Required</th><th class="text-left py-1">Used</th><th class="text-left py-1">Notes</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                {% for m in materials %}
+                <tr><td class="py-1.5">{{ m.product.name }}</td><td>{{ m.quantity_required|floatformat:"-2" }} {{ m.product.unit }}</td><td>{{ m.quantity_used|floatformat:"-2" }}</td><td class="text-slate-500">{{ m.notes }}</td></tr>
+                {% empty %}<tr><td colspan="4" class="py-3 text-slate-500">No materials defined.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if installations %}
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Installations</h3>
+            <div class="divide-y divide-slate-100">
+                {% for ins in installations %}
+                <a href="{{ ins.get_absolute_url }}" class="flex items-center justify-between py-2 px-2 hover:bg-slate-50 rounded">
+                    <div class="text-sm">{{ ins.scheduled_date|date:"M j, Y H:i" }} · {{ ins.team|default:"" }}</div>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100">{{ ins.get_status_display }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if invoices %}
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Invoices</h3>
+            <div class="divide-y divide-slate-100">
+                {% for inv in invoices %}
+                <a href="{{ inv.get_absolute_url }}" class="flex items-center justify-between py-2 px-2 hover:bg-slate-50 rounded text-sm">
+                    <span class="font-medium">{{ inv.invoice_number }}</span>
+                    <span>{{ company.currency_symbol|default:"$" }}{{ inv.total|floatformat:2|intcomma }} · {{ inv.get_status_display }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Status</h3>
+            <div class="text-2xl font-semibold mb-3">{{ job.get_status_display }}</div>
+            <form method="post" action="{% url 'jobs:status' job.pk %}" class="space-y-2 text-sm">
+                {% csrf_token %}
+                {{ status_form.status }}
+                {{ status_form.note }}
+                <button class="w-full bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg">Update status</button>
+            </form>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Status history</h3>
+            <div class="divide-y divide-slate-100 text-sm">
+                {% for h in history %}
+                <div class="py-2">
+                    <div class="text-xs text-slate-500">{{ h.created_at|date:"M j, H:i" }} · {{ h.created_by|default:"system" }}</div>
+                    <div>{{ h.from_status|default:"—" }} → <strong>{{ h.to_status }}</strong></div>
+                    {% if h.note %}<div class="text-slate-600">{{ h.note }}</div>{% endif %}
+                </div>
+                {% empty %}<div class="py-2 text-slate-500">No status changes yet.</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block page_title %}{{ invoice.invoice_number }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'finance:invoice_lines' invoice.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Lines</a>
+<a href="{% url 'finance:invoice_edit' invoice.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
+{% if invoice.status == 'draft' %}<a href="{% url 'finance:invoice_issue' invoice.pk %}" class="bg-sky-600 hover:bg-sky-700 text-white text-sm px-3 py-2 rounded-lg">Issue Invoice</a>{% endif %}
+{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 text-sm">
+            <div class="grid grid-cols-2 gap-3">
+                <div><div class="text-xs text-slate-500">Customer</div><a class="text-brand-600 hover:underline" href="{{ invoice.customer.get_absolute_url }}">{{ invoice.customer.display_name }}</a></div>
+                <div><div class="text-xs text-slate-500">Job</div><a class="text-brand-600 hover:underline" href="{{ invoice.job.get_absolute_url }}">{{ invoice.job.job_number }}</a></div>
+                <div><div class="text-xs text-slate-500">Issue date</div><div>{{ invoice.issue_date }}</div></div>
+                <div><div class="text-xs text-slate-500">Due date</div><div>{{ invoice.due_date|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Status</div><div>{{ invoice.get_status_display }}</div></div>
+                <div><div class="text-xs text-slate-500">Deposit required</div><div>{{ company.currency_symbol|default:"$" }}{{ invoice.deposit_required|floatformat:2|intcomma }}</div></div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Lines</h3>
+            <table class="w-full text-sm">
+                <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-1">Description</th><th class="text-right py-1">Qty</th><th class="text-right py-1">Unit</th><th class="text-right py-1">Total</th></tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                {% for l in invoice.lines.all %}
+                    <tr><td class="py-1.5">{{ l.description }}</td><td class="text-right">{{ l.quantity|floatformat:"-2" }}</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ l.unit_price|floatformat:2|intcomma }}</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ l.line_total|floatformat:2|intcomma }}</td></tr>
+                {% empty %}<tr><td colspan="4" class="py-3 text-slate-500 text-center">No lines.</td></tr>{% endfor %}
+                </tbody>
+                <tfoot class="text-sm">
+                    <tr><td colspan="3" class="text-right py-1">Subtotal</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ invoice.subtotal|floatformat:2|intcomma }}</td></tr>
+                    <tr><td colspan="3" class="text-right py-1">Discount</td><td class="text-right">-{{ company.currency_symbol|default:"$" }}{{ invoice.discount_amount|floatformat:2|intcomma }}</td></tr>
+                    <tr><td colspan="3" class="text-right py-1">VAT ({{ invoice.tax_percent }}%)</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ invoice.tax_amount|floatformat:2|intcomma }}</td></tr>
+                    <tr class="font-semibold border-t border-slate-200"><td colspan="3" class="text-right py-2">Total</td><td class="text-right">{{ company.currency_symbol|default:"$" }}{{ invoice.total|floatformat:2|intcomma }}</td></tr>
+                    <tr><td colspan="3" class="text-right py-1 text-emerald-600">Paid</td><td class="text-right text-emerald-600">{{ company.currency_symbol|default:"$" }}{{ invoice.paid_amount|floatformat:2|intcomma }}</td></tr>
+                    <tr class="font-bold"><td colspan="3" class="text-right py-1 {% if invoice.balance > 0 %}text-rose-600{% endif %}">Balance</td><td class="text-right {% if invoice.balance > 0 %}text-rose-600{% endif %}">{{ company.currency_symbol|default:"$" }}{{ invoice.balance|floatformat:2|intcomma }}</td></tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Record payment</h3>
+            <form method="post" action="{% url 'finance:add_payment' invoice.pk %}" enctype="multipart/form-data" class="space-y-2 text-sm">
+                {% csrf_token %}
+                <div><label class="text-xs text-slate-500">Date</label>{{ payment_form.payment_date }}</div>
+                <div><label class="text-xs text-slate-500">Amount</label>{{ payment_form.amount }}</div>
+                <div><label class="text-xs text-slate-500">Method</label>{{ payment_form.method }}</div>
+                <div><label class="text-xs text-slate-500">Reference</label>{{ payment_form.reference }}</div>
+                <div><label class="text-xs text-slate-500">Receipt</label>{{ payment_form.receipt }}</div>
+                <label class="flex items-center gap-2 text-xs">{{ payment_form.is_deposit }} Deposit payment</label>
+                <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg">Save payment</button>
+            </form>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold mb-3">Payments</h3>
+            <div class="divide-y divide-slate-100 text-sm">
+                {% for p in invoice.payments.all %}
+                <div class="py-2">
+                    <div class="flex justify-between">
+                        <span>{{ p.payment_date }} · {{ p.get_method_display }}</span>
+                        <span class="font-medium">{{ company.currency_symbol|default:"$" }}{{ p.amount|floatformat:2|intcomma }}</span>
+                    </div>
+                    {% if p.reference %}<div class="text-xs text-slate-500">Ref: {{ p.reference }}</div>{% endif %}
+                </div>
+                {% empty %}<div class="py-2 text-slate-500">No payments yet.</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
