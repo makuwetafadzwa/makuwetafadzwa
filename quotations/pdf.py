@@ -6,6 +6,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import (
+    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -48,10 +49,20 @@ def build_quotation_pdf(buffer, quotation):
     small = ParagraphStyle("small", parent=body_style, fontSize=9, textColor=colors.HexColor("#475569"))
 
     story = []
-    # Header
+    # Header — logo (if any) + company name on the left, quote # on the right
+    logo_flowable = ""
+    if company and company.logo:
+        try:
+            logo_flowable = Image(company.logo.path, width=30 * mm, height=30 * mm, kind="proportional")
+        except Exception:
+            logo_flowable = ""
+    company_block = [Paragraph(f"<b>{company_name}</b>", title_style)]
+    if company and company.tagline:
+        company_block.append(Paragraph(company.tagline, small))
+    left_cell = [logo_flowable, *company_block] if logo_flowable else company_block
     header_data = [
         [
-            Paragraph(f"<b>{company_name}</b>", title_style),
+            left_cell,
             Paragraph(f"<b>QUOTATION</b><br/>{quotation.quote_number} v{quotation.version}", h2_style),
         ]
     ]
