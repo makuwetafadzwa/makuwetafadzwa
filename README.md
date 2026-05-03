@@ -6,6 +6,8 @@ A professional, modular Django CRM for a glass & aluminium business. It models t
 
 Built with Django + PostgreSQL (SQLite for dev) + Django Templates + Tailwind CSS.
 
+> **📘 Training your team?** A full end-user training guide is available at [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — covers every role, screen, workflow and an end-to-end worked example.
+
 ---
 
 ## 📦 Apps
