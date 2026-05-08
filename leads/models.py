@@ -46,6 +46,10 @@ class Lead(AuditModel):
     source = models.CharField(
         max_length=20, choices=LeadSource.choices, default=LeadSource.WHATSAPP
     )
+    source_url = models.URLField(
+        blank=True, max_length=500,
+        help_text="Original message link, e.g. wa.me/... or m.me/... — for traceability.",
+    )
     product_interest = models.CharField(
         max_length=30, choices=ProductInterest.choices, default=ProductInterest.WINDOWS
     )
@@ -82,12 +86,44 @@ class Lead(AuditModel):
         return reverse("leads:detail", args=[self.pk])
 
     @property
+    def lead_code(self):
+        return f"LEAD-{self.pk:05d}" if self.pk else "LEAD-?????"
+
+    @property
     def is_won(self):
         return self.status == LeadStatus.WON
 
     @property
     def is_lost(self):
         return self.status == LeadStatus.LOST
+
+    @property
+    def is_converted(self):
+        return self.converted_customer_id is not None
+
+
+class LeadAttachment(AuditModel):
+    """Proof-of-source uploads — WhatsApp/Facebook screenshots, voice notes,
+    house plan PDFs etc. Required for accountability so a salesperson cannot
+    fabricate or hide a lead."""
+
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="attachments")
+    file = models.FileField(upload_to="lead_attachments/")
+    caption = models.CharField(max_length=200, blank=True)
+    KIND_CHOICES = [
+        ("screenshot", "Conversation screenshot"),
+        ("voice_note", "Voice note"),
+        ("house_plan", "House / building plan"),
+        ("photo", "Site photo"),
+        ("other", "Other"),
+    ]
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default="screenshot")
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return self.caption or f"Attachment for {self.lead}"
 
 
 class LeadActivity(AuditModel):

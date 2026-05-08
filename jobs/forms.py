@@ -1,8 +1,7 @@
 from django import forms
-from django.forms import inlineformset_factory
 
 from accounts.forms import TailwindMixin
-from .models import Job, JobMaterial
+from .models import Job, JobVariation
 
 
 class JobForm(TailwindMixin, forms.ModelForm):
@@ -35,12 +34,8 @@ class JobStatusForm(TailwindMixin, forms.Form):
     note = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), required=False)
 
 
-class JobMaterialForm(TailwindMixin, forms.ModelForm):
+class JobVariationForm(TailwindMixin, forms.ModelForm):
     class Meta:
-        model = JobMaterial
-        fields = ("product", "quantity_required", "quantity_used", "notes")
-
-
-JobMaterialFormSet = inlineformset_factory(
-    Job, JobMaterial, form=JobMaterialForm, extra=2, can_delete=True
-)
+        model = JobVariation
+        fields = ("description", "amount", "reason", "customer_acknowledged")
+        widgets = {"description": forms.Textarea(attrs={"rows": 3})}

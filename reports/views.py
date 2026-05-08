@@ -6,8 +6,10 @@ from django.db.models import Count, Sum
 from django.utils import timezone
 from django.views.generic import TemplateView
 
+from accounts.models import Role, User
+from audit.models import AuditAction, AuditLog
+from core.mixins import RoleRequiredMixin
 from finance.models import Invoice, InvoiceStatus, Payment, PaymentMethod
-from inventory.models import Product, StockMovement
 from jobs.models import Job, JobStatus
 from leads.models import Lead, LeadStatus
 from quotations.models import Quotation
@@ -41,6 +43,14 @@ class SalesReportView(LoginRequiredMixin, TemplateView):
         leads = Lead.objects.filter(created_at__date__gte=start, created_at__date__lte=end)
         quotes = Quotation.objects.filter(created_at__date__gte=start, created_at__date__lte=end)
         jobs = Job.objects.filter(created_at__date__gte=start, created_at__date__lte=end)
+        # per-rep activity (accountability)
+        per_rep = (
+            leads.values("assigned_to__username", "assigned_to__first_name", "assigned_to__last_name")
+            .annotate(
+                leads_count=Count("id"),
+                won=Count("id", filter=__import__("django.db.models", fromlist=["Q"]).Q(status=LeadStatus.WON)),
+            )
+        )
         ctx.update({
             "start": start,
             "end": end,
@@ -49,12 +59,10 @@ class SalesReportView(LoginRequiredMixin, TemplateView):
             "leads_lost": leads.filter(status=LeadStatus.LOST).count(),
             "quote_count": quotes.count(),
             "approved_quotes": quotes.filter(status="approved").count(),
-            "approved_value": quotes.filter(status="approved").aggregate(
-                total=Sum("items__quantity")
-            ),
             "jobs_won_value": jobs.aggregate(total=Sum("contract_value"))["total"] or Decimal("0"),
             "jobs_count": jobs.count(),
             "leads_by_source": leads.values("source").annotate(count=Count("id")),
+            "per_rep": per_rep,
         })
         return ctx
 
@@ -106,22 +114,34 @@ class FinanceReportView(LoginRequiredMixin, TemplateView):
         return ctx
 
 
-class InventoryReportView(LoginRequiredMixin, TemplateView):
-    template_name = "reports/inventory.html"
+class StaffActivityReportView(RoleRequiredMixin, TemplateView):
+    """Manager-only view summarising what each user has done in the period —
+    a key accountability artefact."""
+
+    template_name = "reports/staff_activity.html"
+    allowed_roles = (Role.ADMIN, Role.MANAGER)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        products = Product.objects.filter(is_active=True)
-        low_stock = [p for p in products if p.is_low_stock]
-        movements = StockMovement.objects.select_related("product").order_by("-created_at")[:50]
-        ctx.update({
-            "products": products,
-            "low_stock": low_stock,
-            "movements": movements,
-            "total_skus": products.count(),
-            "stock_value": sum(
-                ((p.stock_quantity or Decimal("0")) * (p.cost_price or Decimal("0")) for p in products),
-                Decimal("0"),
-            ),
-        })
+        start, end = _date_range(self.request)
+        rows = []
+        for user in User.objects.order_by("first_name", "username"):
+            entries = AuditLog.objects.filter(
+                actor=user,
+                timestamp__date__gte=start,
+                timestamp__date__lte=end,
+            )
+            rows.append(
+                {
+                    "user": user,
+                    "total": entries.count(),
+                    "leads_created": entries.filter(action=AuditAction.CREATE, target_model="lead").count(),
+                    "quotes_sent": entries.filter(action=AuditAction.SEND, target_model="quotation").count(),
+                    "approvals": entries.filter(action=AuditAction.QUOTE_APPROVED).count(),
+                    "payments_logged": entries.filter(action=AuditAction.CREATE, target_model="payment").count(),
+                    "logins": entries.filter(action=AuditAction.LOGIN).count(),
+                    "deletes": entries.filter(action=AuditAction.DELETE).count(),
+                }
+            )
+        ctx.update({"start": start, "end": end, "rows": rows})
         return ctx

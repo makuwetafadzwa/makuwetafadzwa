@@ -6,10 +6,6 @@
         <div class="text-3xl">🏢</div><div class="font-semibold mt-2">Company Profile</div>
         <div class="text-sm text-slate-500">Branding, contacts and tax settings.</div>
     </a>
-    <a href="{% url 'inventory:category_list' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
-        <div class="text-3xl">🏷️</div><div class="font-semibold mt-2">Product Categories</div>
-        <div class="text-sm text-slate-500">Organise the product catalogue.</div>
-    </a>
     <a href="{% url 'accounts:user_list' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
         <div class="text-3xl">👥</div><div class="font-semibold mt-2">Users & Roles</div>
         <div class="text-sm text-slate-500">Manage staff accounts and roles.</div>
@@ -17,6 +13,10 @@
     <a href="{% url 'installations:team_list' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
         <div class="text-3xl">👷</div><div class="font-semibold mt-2">Installation Teams</div>
         <div class="text-sm text-slate-500">Define installer crews.</div>
+    </a>
+    <a href="{% url 'audit:list' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
+        <div class="text-3xl">🛡️</div><div class="font-semibold mt-2">Audit Trail</div>
+        <div class="text-sm text-slate-500">Every action, who did it, when.</div>
     </a>
 </div>
 {% endblock %}

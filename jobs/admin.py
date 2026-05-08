@@ -1,19 +1,32 @@
 from django.contrib import admin
 
-from .models import Job, JobMaterial, JobStatusUpdate
+from .models import Job, JobStatusUpdate, JobVariation
 
 
-class JobMaterialInline(admin.TabularInline):
-    model = JobMaterial
+class JobVariationInline(admin.TabularInline):
+    model = JobVariation
     extra = 0
 
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ("job_number", "title", "customer", "status", "contract_value", "start_date")
+    list_display = (
+        "job_number",
+        "title",
+        "customer",
+        "status",
+        "contract_value",
+        "start_date",
+    )
     list_filter = ("status",)
-    inlines = [JobMaterialInline]
+    inlines = [JobVariationInline]
     search_fields = ("job_number", "title", "customer__full_name")
+
+
+@admin.register(JobVariation)
+class JobVariationAdmin(admin.ModelAdmin):
+    list_display = ("job", "amount", "reason", "approved_at", "approved_by")
+    list_filter = ("reason",)
 
 
 @admin.register(JobStatusUpdate)

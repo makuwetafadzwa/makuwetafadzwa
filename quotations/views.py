@@ -14,6 +14,8 @@ from django.views.generic import (
     UpdateView,
 )
 
+from audit.models import AuditAction, AuditLog
+from audit.services import log
 from core.mixins import AuditMixin
 from .forms import QuotationForm, QuotationItemFormSet, QuotationRejectForm
 from .models import Quotation, QuotationStatus
@@ -27,7 +29,7 @@ class QuotationListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related("customer", "project")
+        qs = super().get_queryset().select_related("customer", "lead", "project")
         status = self.request.GET.get("status")
         if status:
             qs = qs.filter(status=status)
@@ -44,6 +46,13 @@ class QuotationDetailView(LoginRequiredMixin, DetailView):
     template_name = "quotations/quotation_detail.html"
     context_object_name = "quotation"
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["audit_entries"] = AuditLog.objects.filter(
+            target_app="quotations", target_model="quotation", target_id=str(self.object.pk)
+        ).select_related("actor")[:30]
+        return ctx
+
 
 class QuotationCreateView(LoginRequiredMixin, AuditMixin, CreateView):
     model = Quotation
@@ -53,6 +62,13 @@ class QuotationCreateView(LoginRequiredMixin, AuditMixin, CreateView):
     def get_initial(self):
         initial = super().get_initial()
         initial["issue_date"] = timezone.now().date()
+        # If creating from a Lead detail page (?lead=<id>) prefill it
+        lead_id = self.request.GET.get("lead")
+        if lead_id:
+            initial["lead"] = lead_id
+        cust_id = self.request.GET.get("customer")
+        if cust_id:
+            initial["customer"] = cust_id
         return initial
 
     def get_success_url(self):
@@ -97,20 +113,62 @@ def manage_items(request, pk):
 
 def mark_sent(request, pk):
     quotation = get_object_or_404(Quotation, pk=pk)
+    old = quotation.status
     quotation.status = QuotationStatus.SENT
     quotation.sent_at = timezone.now()
     quotation.updated_by = request.user
     quotation.save()
+    log(AuditAction.SEND, quotation, summary=f"Quote sent (was {old})")
     messages.success(request, "Quotation marked as sent.")
     return redirect(quotation.get_absolute_url())
 
 
 def mark_approved(request, pk):
+    """Approving a quotation closes the loop:
+
+    - If the quote is attached to a Lead (no customer yet), convert the
+      lead into a Customer first, then attach the quote to that customer.
+    - Mark the quote approved + create a Job (handled by signal).
+    - Update the lead status to WON.
+    """
     quotation = get_object_or_404(Quotation, pk=pk)
+
+    # Auto-convert lead → customer
+    if quotation.lead_id and not quotation.customer_id:
+        from customers.models import Customer
+        from leads.models import LeadStatus
+
+        lead = quotation.lead
+        customer = Customer.objects.create(
+            full_name=lead.full_name,
+            company_name=lead.company,
+            phone=lead.phone,
+            email=lead.email,
+            address_line1=lead.address,
+            city=lead.city,
+            created_by=request.user,
+            updated_by=request.user,
+        )
+        quotation.customer = customer
+        lead.converted_customer = customer
+        lead.status = LeadStatus.WON
+        lead.save()
+        log(
+            AuditAction.LEAD_CONVERTED,
+            lead,
+            summary=f"Lead → customer {customer.customer_code} (via quote approval)",
+            extra={"customer_id": customer.pk, "quote_id": quotation.pk},
+        )
+
     quotation.status = QuotationStatus.APPROVED
     quotation.approved_at = timezone.now()
     quotation.updated_by = request.user
     quotation.save()
+    log(
+        AuditAction.QUOTE_APPROVED,
+        quotation,
+        summary=f"Quote {quotation.quote_number} approved (value: {quotation.grand_total})",
+    )
     messages.success(request, "Quotation approved. A job has been created.")
     return redirect(quotation.get_absolute_url())
 
@@ -125,6 +183,12 @@ def mark_rejected(request, pk):
             quotation.rejection_reason = form.cleaned_data.get("reason", "")
             quotation.updated_by = request.user
             quotation.save()
+            log(
+                AuditAction.REJECT,
+                quotation,
+                summary="Quote rejected",
+                extra={"reason": quotation.rejection_reason},
+            )
             messages.success(request, "Quotation marked as rejected.")
             return redirect(quotation.get_absolute_url())
     else:
@@ -132,39 +196,6 @@ def mark_rejected(request, pk):
     return render(
         request, "quotations/quotation_reject.html", {"quotation": quotation, "form": form}
     )
-
-
-def revise_quotation(request, pk):
-    original = get_object_or_404(Quotation, pk=pk)
-    base = original.parent or original
-    last_version = (
-        Quotation.objects.filter(parent=base).order_by("-version").first()
-    )
-    new_version_number = (last_version.version + 1) if last_version else (base.version + 1)
-
-    new_q = Quotation.objects.create(
-        customer=original.customer,
-        project=original.project,
-        site_visit=original.site_visit,
-        parent=base,
-        version=new_version_number,
-        status=QuotationStatus.DRAFT,
-        issue_date=timezone.now().date(),
-        valid_until=original.valid_until,
-        discount_percent=original.discount_percent,
-        tax_percent=original.tax_percent,
-        notes=original.notes,
-        terms=original.terms,
-        created_by=request.user,
-        updated_by=request.user,
-    )
-    for item in original.items.all():
-        item.pk = None
-        item.quotation = new_q
-        item.save()
-
-    messages.success(request, f"Created new quotation version {new_version_number}.")
-    return redirect(new_q.get_absolute_url())
 
 
 def quotation_pdf(request, pk):
@@ -175,6 +206,6 @@ def quotation_pdf(request, pk):
     buffer.close()
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = (
-        f'inline; filename="{quotation.quote_number}-v{quotation.version}.pdf"'
+        f'inline; filename="{quotation.quote_number}.pdf"'
     )
     return response

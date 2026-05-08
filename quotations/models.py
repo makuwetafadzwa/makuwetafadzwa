@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -16,9 +16,26 @@ class QuotationStatus(models.TextChoices):
 
 
 class Quotation(AuditModel):
+    """A quote can be issued to either a Lead (rough quote from plans) or
+    a Customer (existing relationship). Exactly one of the two is required.
+    Approval converts a lead-quote: the lead is converted into a customer
+    and a Job is auto-created via signals.
+    """
+
     quote_number = models.CharField(max_length=30, unique=True, blank=True)
+    lead = models.ForeignKey(
+        "leads.Lead",
+        on_delete=models.PROTECT,
+        related_name="quotations",
+        null=True,
+        blank=True,
+    )
     customer = models.ForeignKey(
-        "customers.Customer", on_delete=models.PROTECT, related_name="quotations"
+        "customers.Customer",
+        on_delete=models.PROTECT,
+        related_name="quotations",
+        null=True,
+        blank=True,
     )
     project = models.ForeignKey(
         "customers.Project",
@@ -27,22 +44,6 @@ class Quotation(AuditModel):
         blank=True,
         related_name="quotations",
     )
-    site_visit = models.ForeignKey(
-        "site_visits.SiteVisit",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="quotations",
-    )
-    parent = models.ForeignKey(
-        "self",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="versions",
-        help_text="Original quote this is a revision of.",
-    )
-    version = models.PositiveSmallIntegerField(default=1)
     status = models.CharField(
         max_length=20, choices=QuotationStatus.choices, default=QuotationStatus.DRAFT
     )
@@ -51,17 +52,23 @@ class Quotation(AuditModel):
     discount_percent = models.DecimalField(
         max_digits=5, decimal_places=2, default=Decimal("0")
     )
-    tax_percent = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("15.00"), help_text="VAT %"
+    notes = models.TextField(
+        blank=True,
+        help_text="Visible to customer on the PDF (under the items table).",
     )
-    notes = models.TextField(blank=True)
+    additional_notes = models.TextField(
+        blank=True,
+        help_text="Extra clauses, scope details or assumptions printed before the terms.",
+    )
     terms = models.TextField(
         blank=True,
         default=(
-            "1. Quote valid for 14 days.\n"
-            "2. 50% deposit required to commence work.\n"
-            "3. Balance due upon installation completion.\n"
-            "4. Lead time 2-4 weeks from deposit confirmation.\n"
+            "1. Quote valid for 14 days from issue.\n"
+            "2. 75% deposit required on acceptance.\n"
+            "3. 25% balance due on completion of installation.\n"
+            "4. Lead time 2–4 weeks from deposit confirmation.\n"
+            "5. Final pricing subject to on-site verification of measurements; any "
+            "increase will be communicated and approved before fabrication.\n"
         ),
     )
     sent_at = models.DateTimeField(null=True, blank=True)
@@ -73,7 +80,14 @@ class Quotation(AuditModel):
         ordering = ("-created_at",)
 
     def __str__(self):
-        return f"{self.quote_number} v{self.version}"
+        return self.quote_number or "Quotation (unsaved)"
+
+    def clean(self):
+        super().clean()
+        if not self.lead_id and not self.customer_id:
+            raise ValidationError(
+                "A quotation must reference either a lead or an existing customer."
+            )
 
     def save(self, *args, **kwargs):
         if not self.quote_number:
@@ -85,6 +99,48 @@ class Quotation(AuditModel):
     def get_absolute_url(self):
         return reverse("quotations:detail", args=[self.pk])
 
+    # ---------- Recipient helpers (lead OR customer) ----------
+    @property
+    def recipient_name(self):
+        if self.customer_id:
+            return self.customer.display_name
+        if self.lead_id:
+            return self.lead.full_name
+        return ""
+
+    @property
+    def recipient_phone(self):
+        if self.customer_id:
+            return self.customer.phone
+        if self.lead_id:
+            return self.lead.phone
+        return ""
+
+    @property
+    def recipient_email(self):
+        if self.customer_id:
+            return self.customer.email
+        if self.lead_id:
+            return self.lead.email
+        return ""
+
+    @property
+    def recipient_address(self):
+        if self.customer_id:
+            return self.customer.address_line1 or ""
+        if self.lead_id:
+            return self.lead.address or ""
+        return ""
+
+    @property
+    def recipient_code(self):
+        if self.customer_id:
+            return self.customer.customer_code or ""
+        if self.lead_id:
+            return f"LEAD-{self.lead_id:05d}"
+        return ""
+
+    # ---------- Totals ----------
     @property
     def subtotal(self):
         return sum((item.line_total for item in self.items.all()), Decimal("0"))
@@ -94,28 +150,22 @@ class Quotation(AuditModel):
         return (self.subtotal * (self.discount_percent or Decimal("0")) / Decimal("100")).quantize(Decimal("0.01"))
 
     @property
-    def taxable_amount(self):
-        return self.subtotal - self.discount_amount
-
-    @property
-    def tax_amount(self):
-        return (self.taxable_amount * (self.tax_percent or Decimal("0")) / Decimal("100")).quantize(Decimal("0.01"))
-
-    @property
     def grand_total(self):
-        return (self.taxable_amount + self.tax_amount).quantize(Decimal("0.01"))
+        return (self.subtotal - self.discount_amount).quantize(Decimal("0.01"))
 
+    # ---------- Status helpers ----------
     @property
     def is_editable(self):
         return self.status in (QuotationStatus.DRAFT, QuotationStatus.SENT)
+
+    @property
+    def is_lead_quote(self):
+        return self.lead_id is not None and self.customer_id is None
 
 
 class QuotationItem(models.Model):
     quotation = models.ForeignKey(
         Quotation, on_delete=models.CASCADE, related_name="items"
-    )
-    product = models.ForeignKey(
-        "inventory.Product", on_delete=models.SET_NULL, null=True, blank=True
     )
     description = models.CharField(max_length=255)
     width_mm = models.PositiveIntegerField(null=True, blank=True)

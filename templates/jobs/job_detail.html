@@ -3,8 +3,7 @@
 {% block page_title %}{{ job.job_number }} · {{ job.title }}{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'jobs:edit' job.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
-<a href="{% url 'jobs:materials' job.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">📦 BOM</a>
-{% if not job.materials_deducted %}<a href="{% url 'jobs:deduct' job.pk %}" class="text-sm bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg">Deduct Materials</a>{% endif %}
+<a href="{% url 'site_visits:create' %}?customer={{ job.customer.pk }}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">📐 Site Visit</a>
 <a href="{% url 'installations:create' %}?job={{ job.pk }}" class="text-sm bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded-lg">Schedule Installation</a>
 <a href="{% url 'finance:invoice_create' %}?job={{ job.pk }}" class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg">+ Invoice</a>
 {% endblock %}
@@ -20,24 +19,51 @@
                 <div><div class="text-xs text-slate-500">Project manager</div><div>{{ job.project_manager|default:"—" }}</div></div>
                 <div><div class="text-xs text-slate-500">Start date</div><div>{{ job.start_date|default:"—" }}</div></div>
                 <div><div class="text-xs text-slate-500">Target completion</div><div>{{ job.target_completion|default:"—" }}</div></div>
-                <div><div class="text-xs text-slate-500">Contract value</div><div class="font-semibold">{{ company.currency_symbol|default:"$" }}{{ job.contract_value|floatformat:2|intcomma }}</div></div>
-                <div><div class="text-xs text-slate-500">Materials deducted</div><div>{% if job.materials_deducted %}Yes{% else %}No{% endif %}</div></div>
+                <div><div class="text-xs text-slate-500">Original quote value</div><div class="font-semibold">{{ company.currency_symbol|default:"$" }}{{ job.contract_value|floatformat:2|intcomma }}</div></div>
+                <div><div class="text-xs text-slate-500">Variations</div><div class="font-semibold {% if job.variations_total > 0 %}text-amber-600{% endif %}">{% if job.variations_total %}+{% endif %}{{ company.currency_symbol|default:"$" }}{{ job.variations_total|floatformat:2|intcomma }}</div></div>
+                <div class="col-span-2"><div class="text-xs text-slate-500">Final value (after approved variations)</div><div class="text-2xl font-semibold text-emerald-600">{{ company.currency_symbol|default:"$" }}{{ job.final_value|floatformat:2|intcomma }}</div></div>
             </div>
             {% if job.notes %}<div class="mt-4 text-sm bg-slate-50 p-3 rounded">{{ job.notes|linebreaks }}</div>{% endif %}
         </div>
 
+        <!-- Variations -->
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <h3 class="font-semibold mb-3">Bill of Materials</h3>
-            <table class="w-full text-sm">
-                <thead class="text-xs uppercase text-slate-500">
-                    <tr><th class="text-left py-1">Product</th><th class="text-left py-1">Required</th><th class="text-left py-1">Used</th><th class="text-left py-1">Notes</th></tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                {% for m in materials %}
-                <tr><td class="py-1.5">{{ m.product.name }}</td><td>{{ m.quantity_required|floatformat:"-2" }} {{ m.product.unit }}</td><td>{{ m.quantity_used|floatformat:"-2" }}</td><td class="text-slate-500">{{ m.notes }}</td></tr>
-                {% empty %}<tr><td colspan="4" class="py-3 text-slate-500">No materials defined.</td></tr>{% endfor %}
-                </tbody>
-            </table>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold">Price Variations</h3>
+                <span class="text-xs text-slate-500">e.g. site measured larger than plan</span>
+            </div>
+            <form method="post" action="{% url 'jobs:add_variation' job.pk %}" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+                {% csrf_token %}
+                {{ variation_form.description }}
+                {{ variation_form.amount }}
+                {{ variation_form.reason }}
+                <label class="flex items-center gap-2 text-xs sm:col-span-2">{{ variation_form.customer_acknowledged }} Customer acknowledged</label>
+                <button class="bg-amber-600 hover:bg-amber-700 text-white text-sm px-4 py-2 rounded-lg">Log Variation</button>
+            </form>
+            <div class="divide-y divide-slate-100 text-sm">
+                {% for v in variations %}
+                <div class="py-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-semibold">{{ company.currency_symbol|default:"$" }}{{ v.amount|floatformat:2|intcomma }}</span>
+                            <span class="text-xs text-slate-500"> · {{ v.get_reason_display }}</span>
+                            {% if v.customer_acknowledged %}<span class="ml-1 text-xs text-emerald-600">✓ ack</span>{% endif %}
+                        </div>
+                        {% if v.is_approved %}
+                            <span class="text-xs text-emerald-600">Approved by {{ v.approved_by|default:"" }} · {{ v.approved_at|date:"M j" }}</span>
+                        {% else %}
+                            {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+                                <a href="{% url 'jobs:approve_variation' v.pk %}" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded">Approve</a>
+                            {% else %}
+                                <span class="text-xs text-amber-600">Pending manager approval</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="text-slate-600 mt-1 whitespace-pre-line">{{ v.description }}</div>
+                    <div class="text-xs text-slate-400 mt-1">Logged by {{ v.created_by|default:"system" }} · {{ v.created_at|date:"M j, H:i" }}</div>
+                </div>
+                {% empty %}<div class="text-sm text-slate-500 py-2">No variations on this job. The original quote value stands.</div>{% endfor %}
+            </div>
         </div>
 
         {% if installations %}
@@ -93,6 +119,8 @@
                 {% empty %}<div class="py-2 text-slate-500">No status changes yet.</div>{% endfor %}
             </div>
         </div>
+
+        {% include "partials/activity_timeline.html" with entries=audit_entries %}
     </div>
 </div>
 {% endblock %}

@@ -17,10 +17,12 @@
         <div class="font-semibold mt-2">Finance Report</div>
         <div class="text-sm text-slate-500">Revenue, payments and outstanding amounts.</div>
     </a>
-    <a href="{% url 'reports:inventory' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
-        <div class="text-3xl">📦</div>
-        <div class="font-semibold mt-2">Inventory Report</div>
-        <div class="text-sm text-slate-500">Stock levels, movements and value.</div>
+    {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+    <a href="{% url 'reports:staff' %}" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-brand-300">
+        <div class="text-3xl">🧑‍💼</div>
+        <div class="font-semibold mt-2">Staff Activity</div>
+        <div class="text-sm text-slate-500">Per-user actions for accountability.</div>
     </a>
+    {% endif %}
 </div>
 {% endblock %}

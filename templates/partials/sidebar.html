@@ -25,9 +25,6 @@
         <a href="{% url 'customers:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/customers/' in request.path %}bg-slate-800 text-white{% endif %}">
             <span class="w-5 text-center">👤</span> Customers
         </a>
-        <a href="{% url 'site_visits:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/site-visits/' in request.path %}bg-slate-800 text-white{% endif %}">
-            <span class="w-5 text-center">📐</span> Site Visits
-        </a>
         <a href="{% url 'quotations:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/quotations/' in request.path %}bg-slate-800 text-white{% endif %}">
             <span class="w-5 text-center">📄</span> Quotations
         </a>
@@ -36,17 +33,11 @@
         <a href="{% url 'jobs:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/jobs/' in request.path %}bg-slate-800 text-white{% endif %}">
             <span class="w-5 text-center">🔧</span> Jobs / Orders
         </a>
+        <a href="{% url 'site_visits:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/site-visits/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">📐</span> Site Visits
+        </a>
         <a href="{% url 'installations:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/installations/' in request.path %}bg-slate-800 text-white{% endif %}">
             <span class="w-5 text-center">🏗️</span> Installations
-        </a>
-        <a href="{% url 'inventory:product_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/inventory/' in request.path %}bg-slate-800 text-white{% endif %}">
-            <span class="w-5 text-center">📦</span> Inventory
-        </a>
-        <a href="{% url 'inventory:supplier_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/suppliers/' in request.path %}bg-slate-800 text-white{% endif %}">
-            <span class="w-5 text-center">🚚</span> Suppliers
-        </a>
-        <a href="{% url 'inventory:po_list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/purchase-orders/' in request.path %}bg-slate-800 text-white{% endif %}">
-            <span class="w-5 text-center">🧾</span> Purchase Orders
         </a>
 
         <div class="pt-3 px-3 text-[11px] uppercase tracking-wider text-slate-500">Finance</div>
@@ -64,6 +55,9 @@
 
         {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
         <div class="pt-3 px-3 text-[11px] uppercase tracking-wider text-slate-500">Admin</div>
+        <a href="{% url 'audit:list' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/audit/' in request.path %}bg-slate-800 text-white{% endif %}">
+            <span class="w-5 text-center">🛡️</span> Audit Trail
+        </a>
         <a href="{% url 'company_settings:home' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-slate-800 {% if '/settings/' in request.path %}bg-slate-800 text-white{% endif %}">
             <span class="w-5 text-center">⚙️</span> Settings
         </a>

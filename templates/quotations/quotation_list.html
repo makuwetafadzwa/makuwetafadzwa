@@ -15,13 +15,16 @@
 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <table class="min-w-full text-sm">
         <thead class="bg-slate-50 text-xs uppercase text-slate-600">
-            <tr><th class="text-left px-4 py-3">Quote #</th><th class="text-left px-4 py-3">Customer</th><th class="text-left px-4 py-3">Issue date</th><th class="text-left px-4 py-3">Status</th><th class="text-right px-4 py-3">Total</th></tr>
+            <tr><th class="text-left px-4 py-3">Quote #</th><th class="text-left px-4 py-3">Recipient</th><th class="text-left px-4 py-3">Issue date</th><th class="text-left px-4 py-3">Status</th><th class="text-right px-4 py-3">Total</th></tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
             {% for q in quotations %}
             <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{{ q.get_absolute_url }}'">
-                <td class="px-4 py-3 font-medium">{{ q.quote_number }} <span class="text-xs text-slate-400">v{{ q.version }}</span></td>
-                <td class="px-4 py-3">{{ q.customer.display_name }}</td>
+                <td class="px-4 py-3 font-medium">{{ q.quote_number }}</td>
+                <td class="px-4 py-3">
+                    {{ q.recipient_name }}
+                    {% if q.lead and not q.customer %}<span class="text-xs text-amber-600 block">Lead</span>{% endif %}
+                </td>
                 <td class="px-4 py-3">{{ q.issue_date }}</td>
                 <td class="px-4 py-3">
                     <span class="text-xs px-2 py-0.5 rounded-full

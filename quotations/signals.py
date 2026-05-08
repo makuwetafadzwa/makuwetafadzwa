@@ -17,6 +17,10 @@ def auto_create_job_on_approval(sender, instance, created, **kwargs):
     if Job.objects.filter(quotation=instance).exists():
         return
 
+    if not instance.customer_id:
+        # Should have been resolved by the approval view; skip silently.
+        return
+
     Job.objects.create(
         quotation=instance,
         customer=instance.customer,

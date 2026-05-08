@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block page_title %}Audit Trail{% endblock %}
+{% block breadcrumb %}Admin{% endblock %}
+{% block content %}
+<form method="get" class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-wrap gap-2 mb-4 items-end">
+    <input name="q" value="{{ request.GET.q }}" placeholder="Search target / actor / summary…" class="flex-1 min-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm">
+    <select name="action" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <option value="">All actions</option>
+        {% for v, l in actions %}<option value="{{ v }}" {% if request.GET.action == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+    <select name="actor" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <option value="">All users</option>
+        {% for u in users %}<option value="{{ u.id }}" {% if request.GET.actor == u.id|stringformat:'s' %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+    </select>
+    <select name="model" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <option value="">All models</option>
+        {% for m in models %}<option value="{{ m }}" {% if request.GET.model == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+    </select>
+    <button class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">Filter</button>
+</form>
+
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-600">
+            <tr>
+                <th class="text-left px-4 py-3">When</th>
+                <th class="text-left px-4 py-3">Who</th>
+                <th class="text-left px-4 py-3">Action</th>
+                <th class="text-left px-4 py-3">Target</th>
+                <th class="text-left px-4 py-3">Summary</th>
+                <th class="text-left px-4 py-3">IP</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for e in entries %}
+            <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{% url 'audit:detail' e.pk %}'">
+                <td class="px-4 py-3 whitespace-nowrap text-slate-500">{{ e.timestamp|date:"M j H:i:s" }}</td>
+                <td class="px-4 py-3 font-medium">{{ e.actor_label|default:"system" }}</td>
+                <td class="px-4 py-3">
+                    <span class="text-xs px-2 py-0.5 rounded-full
+                        {% if e.action == 'create' %}bg-emerald-50 text-emerald-700
+                        {% elif e.action == 'delete' %}bg-rose-50 text-rose-700
+                        {% elif e.action == 'login' %}bg-sky-50 text-sky-700
+                        {% elif e.action == 'login_failed' %}bg-rose-50 text-rose-700
+                        {% elif e.action == 'webhook' %}bg-violet-50 text-violet-700
+                        {% else %}bg-slate-100 text-slate-700{% endif %}">
+                        {{ e.get_action_display }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-slate-600">{{ e.target_label }}{% if e.target_id %} #{{ e.target_id }}{% endif %}</td>
+                <td class="px-4 py-3 text-slate-600 truncate max-w-[300px]">{{ e.summary|default:e.target_repr }}</td>
+                <td class="px-4 py-3 text-xs text-slate-500">{{ e.ip_address|default:"—" }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6">{% include "partials/empty_state.html" with title="No audit entries match your filter." %}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

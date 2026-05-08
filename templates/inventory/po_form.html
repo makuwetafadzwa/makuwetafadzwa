@@ -1,3 +1,0 @@
-{% extends "base.html" %}
-{% block page_title %}{% if object %}Edit{% else %}New{% endif %} purchase order{% endblock %}
-{% block content %}{% include "partials/form_card.html" with title="Purchase order" action_label="Save" cancel_url='/inventory/purchase-orders/' %}{% endblock %}

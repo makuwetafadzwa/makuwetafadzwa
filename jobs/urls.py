@@ -10,7 +10,7 @@ urlpatterns = [
     path("<int:pk>/", views.JobDetailView.as_view(), name="detail"),
     path("<int:pk>/edit/", views.JobUpdateView.as_view(), name="edit"),
     path("<int:pk>/delete/", views.JobDeleteView.as_view(), name="delete"),
-    path("<int:pk>/materials/", views.manage_materials, name="materials"),
-    path("<int:pk>/deduct/", views.deduct_materials, name="deduct"),
     path("<int:pk>/status/", views.update_status, name="status"),
+    path("<int:pk>/variation/", views.add_variation, name="add_variation"),
+    path("variations/<int:pk>/approve/", views.approve_variation, name="approve_variation"),
 ]

@@ -1,0 +1,31 @@
+{% comment %}
+Renders a vertical timeline from a list of audit entries.
+Usage: see lead_detail.html / job_detail.html / quotation_detail.html.
+{% endcomment %}
+<div class="bg-white border border-slate-200 rounded-xl p-5">
+    <h3 class="font-semibold text-slate-900 mb-3">Activity Timeline</h3>
+    <ol class="relative border-l border-slate-200 ml-2">
+        {% for e in entries %}
+        <li class="ml-4 mb-4">
+            <div class="absolute w-2.5 h-2.5 rounded-full -left-1.5 mt-1.5
+                {% if e.action == 'create' %}bg-emerald-500
+                {% elif e.action == 'delete' %}bg-rose-500
+                {% elif e.action == 'quote_approved' or e.action == 'approve' %}bg-emerald-500
+                {% elif e.action == 'reject' %}bg-rose-500
+                {% elif e.action == 'send' %}bg-sky-500
+                {% elif e.action == 'payment' %}bg-emerald-500
+                {% elif e.action == 'webhook' %}bg-violet-500
+                {% else %}bg-slate-400{% endif %}"></div>
+            <div class="text-xs text-slate-500">{{ e.timestamp|date:"M j, Y H:i" }} · <span class="font-medium text-slate-700">{{ e.actor_label|default:"system" }}</span></div>
+            <div class="text-sm">
+                <a href="{% url 'audit:detail' e.pk %}" class="hover:underline">
+                    <span class="font-medium">{{ e.get_action_display }}</span>
+                    {% if e.summary %}<span class="text-slate-600"> — {{ e.summary }}</span>{% endif %}
+                </a>
+            </div>
+        </li>
+        {% empty %}
+        <li class="ml-4 text-sm text-slate-500">No activity recorded yet.</li>
+        {% endfor %}
+    </ol>
+</div>

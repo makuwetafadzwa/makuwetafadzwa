@@ -1,12 +1,12 @@
 from decimal import Decimal
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Sum
 from django.utils import timezone
 from django.views.generic import TemplateView
 
+from audit.models import AuditAction, AuditLog
 from finance.models import Invoice, InvoiceStatus, Payment
-from inventory.models import Product
 from jobs.models import Job, JobStatus
 from leads.models import Lead, LeadStatus
 from quotations.models import Quotation, QuotationStatus
@@ -41,8 +41,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         for inv in Invoice.objects.exclude(status=InvoiceStatus.CANCELLED):
             outstanding += inv.balance
 
-        low_stock_products = [p for p in Product.objects.filter(is_active=True) if p.is_low_stock][:10]
-
         recent_leads = Lead.objects.order_by("-created_at")[:5]
         recent_quotes = Quotation.objects.order_by("-created_at")[:5]
         recent_jobs = Job.objects.order_by("-created_at")[:5]
@@ -53,9 +51,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         leads_by_status = (
             Lead.objects.values("status").annotate(count=Count("id")).order_by("status")
         )
-        leads_by_source = (
-            Lead.objects.values("source").annotate(count=Count("id")).order_by("source")
-        )
+
+        recent_audit = AuditLog.objects.select_related("actor").exclude(
+            action__in=[AuditAction.LOGIN, AuditAction.LOGOUT]
+        )[:10]
 
         ctx.update({
             "total_leads": total_leads,
@@ -65,15 +64,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             "completed_jobs": completed_jobs,
             "revenue_this_month": revenue_this_month,
             "outstanding": outstanding.quantize(Decimal("0.01")),
-            "low_stock_products": low_stock_products,
             "recent_leads": recent_leads,
             "recent_quotes": recent_quotes,
             "recent_jobs": recent_jobs,
             "upcoming_visits": upcoming_visits,
             "leads_by_status": leads_by_status,
-            "leads_by_source": leads_by_source,
             "pending_quotes": Quotation.objects.filter(
                 status__in=[QuotationStatus.DRAFT, QuotationStatus.SENT]
             ).count(),
+            "recent_audit": recent_audit,
         })
         return ctx
