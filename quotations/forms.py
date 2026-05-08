@@ -9,29 +9,37 @@ class QuotationForm(TailwindMixin, forms.ModelForm):
     class Meta:
         model = Quotation
         fields = (
+            "lead",
             "customer",
             "project",
-            "site_visit",
             "issue_date",
             "valid_until",
             "discount_percent",
-            "tax_percent",
             "notes",
+            "additional_notes",
             "terms",
         )
         widgets = {
             "issue_date": forms.DateInput(attrs={"type": "date"}),
             "valid_until": forms.DateInput(attrs={"type": "date"}),
-            "notes": forms.Textarea(attrs={"rows": 3}),
-            "terms": forms.Textarea(attrs={"rows": 4}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
+            "additional_notes": forms.Textarea(attrs={"rows": 4}),
+            "terms": forms.Textarea(attrs={"rows": 5}),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("lead") and not cleaned.get("customer"):
+            raise forms.ValidationError(
+                "Pick either an existing lead OR an existing customer for this quotation."
+            )
+        return cleaned
 
 
 class QuotationItemForm(TailwindMixin, forms.ModelForm):
     class Meta:
         model = QuotationItem
         fields = (
-            "product",
             "description",
             "width_mm",
             "height_mm",

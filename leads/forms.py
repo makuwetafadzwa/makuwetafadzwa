@@ -1,7 +1,7 @@
 from django import forms
 
 from accounts.forms import TailwindMixin
-from .models import Lead, LeadActivity
+from .models import Lead, LeadActivity, LeadAttachment
 
 
 class LeadForm(TailwindMixin, forms.ModelForm):
@@ -19,6 +19,12 @@ class LeadActivityForm(TailwindMixin, forms.ModelForm):
         model = LeadActivity
         fields = ("activity_type", "description")
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+
+
+class LeadAttachmentForm(TailwindMixin, forms.ModelForm):
+    class Meta:
+        model = LeadAttachment
+        fields = ("file", "kind", "caption")
 
 
 class LeadConvertForm(TailwindMixin, forms.Form):

@@ -14,6 +14,5 @@ urlpatterns = [
     path("<int:pk>/send/", views.mark_sent, name="send"),
     path("<int:pk>/approve/", views.mark_approved, name="approve"),
     path("<int:pk>/reject/", views.mark_rejected, name="reject"),
-    path("<int:pk>/revise/", views.revise_quotation, name="revise"),
     path("<int:pk>/pdf/", views.quotation_pdf, name="pdf"),
 ]

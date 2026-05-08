@@ -92,9 +92,9 @@ def build_quotation_pdf(buffer, quotation):
                 Paragraph(quotation.quote_number, value),
                 Paragraph(quotation.issue_date.strftime("%d/%m/%Y"), value),
             ],
-            [Paragraph("CUSTOMER ID", label), Paragraph("VALID UNTIL", label)],
+            [Paragraph("REF", label), Paragraph("VALID UNTIL", label)],
             [
-                Paragraph(quotation.customer.customer_code or "", value),
+                Paragraph(quotation.recipient_code, value),
                 Paragraph(valid_until, value),
             ],
         ],
@@ -131,8 +131,7 @@ def build_quotation_pdf(buffer, quotation):
     story.append(header)
     story.append(Spacer(1, 5 * mm))
 
-    # ------- 2. CUSTOMER INFO + PREPARED BY -------
-    cust = quotation.customer
+    # ------- 2. RECIPIENT INFO + PREPARED BY -------
     customer_header = Table(
         [[Paragraph("CUSTOMER INFO", section_header)]],
         colWidths=[80 * mm],
@@ -149,18 +148,30 @@ def build_quotation_pdf(buffer, quotation):
         )
     )
 
-    cust_lines = [cust.full_name]
-    if (
-        cust.company_name
-        and getattr(cust, "customer_type", "") != "individual"
-        and cust.company_name != cust.full_name
-    ):
-        cust_lines.append(cust.company_name)
-    if cust.address_line1:
-        cust_lines.append(cust.address_line1)
-    if cust.city:
-        cust_lines.append(f"{cust.city}, {cust.country}")
-    contact_bits = " · ".join(filter(None, [cust.phone, cust.email]))
+    cust_lines = [quotation.recipient_name]
+    cust = quotation.customer
+    if cust:
+        if (
+            cust.company_name
+            and getattr(cust, "customer_type", "") != "individual"
+            and cust.company_name != cust.full_name
+        ):
+            cust_lines.append(cust.company_name)
+        if cust.address_line1:
+            cust_lines.append(cust.address_line1)
+        if cust.city:
+            cust_lines.append(f"{cust.city}, {cust.country}")
+    elif quotation.lead:
+        if quotation.lead.company:
+            cust_lines.append(quotation.lead.company)
+        if quotation.lead.address:
+            cust_lines.append(quotation.lead.address)
+        if quotation.lead.city:
+            cust_lines.append(quotation.lead.city)
+
+    contact_bits = " · ".join(
+        filter(None, [quotation.recipient_phone, quotation.recipient_email])
+    )
     if contact_bits:
         cust_lines.append(contact_bits)
     customer_text = Paragraph("<br/>".join(cust_lines), body_sm)
@@ -255,9 +266,6 @@ def build_quotation_pdf(buffer, quotation):
         totals_data.append(
             [f"DISCOUNT ({quotation.discount_percent:g}%)", "-" + money(quotation.discount_amount)]
         )
-    if quotation.tax_amount > 0:
-        totals_data.append([f"VAT ({quotation.tax_percent:g}%)", money(quotation.tax_amount)])
-    if quotation.discount_amount > 0 or quotation.tax_amount > 0:
         totals_data.append(["TOTAL", money(quotation.grand_total)])
     totals_data.append([f"DEPOSIT ({deposit_pct:g}%)", money(deposit_amt)])
     totals_data.append(["BAL ON COMPL", f"{sym}  {balance:,.2f}"])
@@ -306,6 +314,16 @@ def build_quotation_pdf(buffer, quotation):
     )
     story.append(tagline_totals)
     story.append(Spacer(1, 4 * mm))
+
+    # ------- 5a. ADDITIONAL NOTES -------
+    extras_block = []
+    if quotation.additional_notes:
+        extras_block.append(Paragraph("<b>ADDITIONAL NOTES</b>", body_sm))
+        for line in quotation.additional_notes.splitlines():
+            line = line.strip()
+            if line:
+                extras_block.append(Paragraph(line, body_sm))
+        extras_block.append(Spacer(1, 3 * mm))
 
     # ------- 5. TERMS -------
     balance_pct = Decimal("100") - deposit_pct
@@ -360,6 +378,7 @@ def build_quotation_pdf(buffer, quotation):
                 banking_block.append(Paragraph(f"<b>{line}</b>", body_sm))
 
     # Keep the acceptance box together; allow the rest to flow.
+    story.extend(extras_block)
     story.extend(terms_block)
     story.append(KeepTogether(acceptance))
     story.extend(banking_block)

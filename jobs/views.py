@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,9 +11,11 @@ from django.views.generic import (
     UpdateView,
 )
 
+from audit.models import AuditAction, AuditLog
+from audit.services import log, log_status_change
 from core.mixins import AuditMixin
-from .forms import JobForm, JobMaterialFormSet, JobStatusForm
-from .models import Job, JobStatus, JobStatusUpdate
+from .forms import JobForm, JobStatusForm, JobVariationForm
+from .models import Job, JobStatus, JobStatusUpdate, JobVariation
 
 
 class JobListView(LoginRequiredMixin, ListView):
@@ -45,10 +45,18 @@ class JobDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["status_form"] = JobStatusForm(initial={"status": self.object.status})
-        ctx["materials"] = self.object.materials.select_related("product").all()
+        ctx["variation_form"] = JobVariationForm()
+        ctx["variations"] = self.object.variations.select_related("approved_by").all()
         ctx["history"] = self.object.status_updates.all()
-        ctx["installations"] = self.object.installations.all() if hasattr(self.object, "installations") else []
-        ctx["invoices"] = self.object.invoices.all() if hasattr(self.object, "invoices") else []
+        ctx["installations"] = (
+            self.object.installations.all() if hasattr(self.object, "installations") else []
+        )
+        ctx["invoices"] = (
+            self.object.invoices.all() if hasattr(self.object, "invoices") else []
+        )
+        ctx["audit_entries"] = AuditLog.objects.filter(
+            target_app="jobs", target_model="job", target_id=str(self.object.pk)
+        ).select_related("actor")[:30]
         return ctx
 
 
@@ -73,50 +81,6 @@ class JobDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy("jobs:list")
 
 
-def manage_materials(request, pk):
-    job = get_object_or_404(Job, pk=pk)
-    if request.method == "POST":
-        formset = JobMaterialFormSet(request.POST, instance=job)
-        if formset.is_valid():
-            instances = formset.save(commit=False)
-            for obj in instances:
-                if not obj.pk:
-                    obj.created_by = request.user
-                obj.updated_by = request.user
-                obj.save()
-            for obj in formset.deleted_objects:
-                obj.delete()
-            messages.success(request, "Bill of materials saved.")
-            return redirect(job.get_absolute_url())
-    else:
-        formset = JobMaterialFormSet(instance=job)
-    return render(request, "jobs/job_materials.html", {"job": job, "formset": formset})
-
-
-def deduct_materials(request, pk):
-    job = get_object_or_404(Job, pk=pk)
-    if job.materials_deducted:
-        messages.info(request, "Materials already deducted for this job.")
-        return redirect(job.get_absolute_url())
-
-    for material in job.materials.all():
-        outstanding = (material.quantity_required or Decimal("0")) - (material.quantity_used or Decimal("0"))
-        if outstanding > 0:
-            material.product.adjust_stock(
-                -outstanding,
-                reason="job_use",
-                user=request.user,
-                reference=job.job_number,
-            )
-            material.quantity_used = material.quantity_required
-            material.save()
-    job.materials_deducted = True
-    job.updated_by = request.user
-    job.save()
-    messages.success(request, "Materials deducted from inventory.")
-    return redirect(job.get_absolute_url())
-
-
 def update_status(request, pk):
     job = get_object_or_404(Job, pk=pk)
     if request.method == "POST":
@@ -124,9 +88,10 @@ def update_status(request, pk):
         if form.is_valid():
             new_status = form.cleaned_data["status"]
             note = form.cleaned_data.get("note", "")
+            old_status = job.status
             JobStatusUpdate.objects.create(
                 job=job,
-                from_status=job.status,
+                from_status=old_status,
                 to_status=new_status,
                 note=note,
                 created_by=request.user,
@@ -136,5 +101,46 @@ def update_status(request, pk):
                 job.completed_at = timezone.now().date()
             job.updated_by = request.user
             job.save()
+            log_status_change(job, old_status, new_status, note=note)
             messages.success(request, f"Job status updated to {job.get_status_display()}.")
     return redirect(job.get_absolute_url())
+
+
+def add_variation(request, pk):
+    """Record a price change after the original quote was approved
+    (e.g. site measurements were larger than the plan-based estimate)."""
+    job = get_object_or_404(Job, pk=pk)
+    if request.method == "POST":
+        form = JobVariationForm(request.POST)
+        if form.is_valid():
+            v = form.save(commit=False)
+            v.job = job
+            v.created_by = request.user
+            v.updated_by = request.user
+            v.save()
+            log(
+                AuditAction.NOTE,
+                v,
+                summary=f"Variation logged on {job.job_number}: {v.amount}",
+                extra={"reason": v.reason, "job_id": job.pk},
+            )
+            messages.success(request, "Variation recorded. Awaiting manager approval.")
+    return redirect(job.get_absolute_url())
+
+
+def approve_variation(request, pk):
+    variation = get_object_or_404(JobVariation, pk=pk)
+    if variation.is_approved:
+        messages.info(request, "This variation has already been approved.")
+        return redirect(variation.job.get_absolute_url())
+    variation.approved_at = timezone.now()
+    variation.approved_by = request.user
+    variation.updated_by = request.user
+    variation.save()
+    log(
+        AuditAction.APPROVE,
+        variation,
+        summary=f"Variation approved: {variation.amount} on {variation.job.job_number}",
+    )
+    messages.success(request, "Variation approved and applied to the job total.")
+    return redirect(variation.job.get_absolute_url())

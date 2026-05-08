@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block page_title %}Audit entry · #{{ entry.pk }}{% endblock %}
+{% block content %}
+<div class="bg-white border border-slate-200 rounded-xl p-5 max-w-3xl">
+    <div class="grid grid-cols-2 gap-4 text-sm">
+        <div><div class="text-xs text-slate-500">When</div><div>{{ entry.timestamp }}</div></div>
+        <div><div class="text-xs text-slate-500">Actor</div><div>{{ entry.actor_label|default:"system" }}</div></div>
+        <div><div class="text-xs text-slate-500">Action</div><div>{{ entry.get_action_display }}</div></div>
+        <div><div class="text-xs text-slate-500">IP</div><div>{{ entry.ip_address|default:"—" }}</div></div>
+        <div class="col-span-2"><div class="text-xs text-slate-500">Target</div><div>{{ entry.target_label }} #{{ entry.target_id }} — {{ entry.target_repr }}</div></div>
+        {% if entry.summary %}<div class="col-span-2"><div class="text-xs text-slate-500">Summary</div><div>{{ entry.summary }}</div></div>{% endif %}
+    </div>
+    {% if entry.changes %}
+    <div class="mt-5">
+        <h3 class="font-semibold text-sm mb-2">Field changes</h3>
+        <table class="w-full text-sm">
+            <thead class="text-xs uppercase text-slate-500"><tr><th class="text-left py-1">Field</th><th class="text-left py-1">Old</th><th class="text-left py-1">New</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+            {% for field, change in entry.changes.items %}
+                <tr>
+                    <td class="py-1.5 font-mono text-xs">{{ field }}</td>
+                    <td class="py-1.5 text-rose-600 font-mono text-xs">{% if change.old != None %}{{ change.old|truncatechars:80 }}{% else %}{{ change|truncatechars:80 }}{% endif %}</td>
+                    <td class="py-1.5 text-emerald-600 font-mono text-xs">{% if change.new != None %}{{ change.new|truncatechars:80 }}{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% if entry.extra %}
+    <div class="mt-5">
+        <h3 class="font-semibold text-sm mb-2">Extra context</h3>
+        <pre class="bg-slate-50 p-3 rounded text-xs overflow-x-auto">{{ entry.extra|pprint }}</pre>
+    </div>
+    {% endif %}
+</div>
+<a href="{% url 'audit:list' %}" class="inline-block mt-4 text-sm text-brand-600 hover:underline">← Back to audit trail</a>
+{% endblock %}

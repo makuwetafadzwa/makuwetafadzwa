@@ -25,13 +25,13 @@ INSTALLED_APPS = [
     "crispy_tailwind",
     # Local apps
     "accounts.apps.AccountsConfig",
+    "audit.apps.AuditConfig",
     "dashboard.apps.DashboardConfig",
     "leads.apps.LeadsConfig",
     "customers.apps.CustomersConfig",
     "site_visits.apps.SiteVisitsConfig",
     "quotations.apps.QuotationsConfig",
     "jobs.apps.JobsConfig",
-    "inventory.apps.InventoryConfig",
     "installations.apps.InstallationsConfig",
     "finance.apps.FinanceConfig",
     "reports.apps.ReportsConfig",
@@ -47,7 +47,12 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "audit.middleware.CurrentRequestMiddleware",
 ]
+
+# Public webhook key for inbound leads (Zapier / Facebook / WhatsApp).
+# Set ALUFLOW_LEAD_API_KEY in your environment to enable /api/leads/webhook/.
+ALUFLOW_LEAD_API_KEY = os.environ.get("ALUFLOW_LEAD_API_KEY", "")
 
 ROOT_URLCONF = "aluflow.urls"
 

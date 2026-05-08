@@ -4,25 +4,35 @@
 {% block page_title %}{{ lead.full_name }}{% endblock %}
 {% block topbar_actions %}
 <a href="{% url 'leads:edit' lead.pk %}" class="text-sm border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</a>
-{% if not lead.converted_customer %}
-<a href="{% url 'leads:convert' lead.pk %}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-3 py-2 rounded-lg">Convert to Customer</a>
+{% if not lead.is_converted %}
+<a href="{% url 'quotations:create' %}?lead={{ lead.pk }}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-3 py-2 rounded-lg">+ Create Quotation</a>
 {% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <div class="lg:col-span-2 space-y-4">
+        <!-- Lead summary card -->
         <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-mono text-slate-500">{{ lead.lead_code }}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full
+                    {% if lead.status == 'won' %}bg-emerald-50 text-emerald-700
+                    {% elif lead.status == 'lost' %}bg-rose-50 text-rose-700
+                    {% elif lead.status == 'quoted' %}bg-sky-50 text-sky-700
+                    {% else %}bg-slate-100 text-slate-700{% endif %}">{{ lead.get_status_display }}</span>
+            </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                 <div><div class="text-xs text-slate-500">Phone</div><div>{{ lead.phone }}</div></div>
                 <div><div class="text-xs text-slate-500">Email</div><div>{{ lead.email|default:"—" }}</div></div>
                 <div><div class="text-xs text-slate-500">Source</div><div>{{ lead.get_source_display }}</div></div>
-                <div><div class="text-xs text-slate-500">Status</div><div>{{ lead.get_status_display }}</div></div>
                 <div><div class="text-xs text-slate-500">Interest</div><div>{{ lead.get_product_interest_display }}</div></div>
-                <div><div class="text-xs text-slate-500">Estimated Value</div><div>{{ lead.estimated_value|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Estimated value</div><div>{{ lead.estimated_value|default:"—" }}</div></div>
                 <div><div class="text-xs text-slate-500">Address</div><div>{{ lead.address|default:"—" }}</div></div>
                 <div><div class="text-xs text-slate-500">City</div><div>{{ lead.city|default:"—" }}</div></div>
                 <div><div class="text-xs text-slate-500">Next follow-up</div><div>{{ lead.next_followup|default:"—" }}</div></div>
+                <div><div class="text-xs text-slate-500">Assigned</div><div>{{ lead.assigned_to|default:"—" }}</div></div>
+                {% if lead.source_url %}<div class="col-span-3"><div class="text-xs text-slate-500">Source link</div><a class="text-brand-600 hover:underline break-all" href="{{ lead.source_url }}" target="_blank">{{ lead.source_url }}</a></div>{% endif %}
             </div>
             {% if lead.notes %}
                 <div class="mt-4 text-sm">
@@ -32,8 +42,55 @@
             {% endif %}
         </div>
 
+        <!-- Attachments / proof -->
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <h3 class="font-semibold text-slate-900 mb-3">Activities</h3>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-900">Proof of source ({{ attachments|length }})</h3>
+                <span class="text-xs text-slate-500">screenshots · plans · voice notes</span>
+            </div>
+            <form method="post" action="{% url 'leads:add_attachment' lead.pk %}" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+                {% csrf_token %}
+                {{ attachment_form.file }}
+                {{ attachment_form.kind }}
+                <div class="flex gap-2 sm:col-span-3">
+                    {{ attachment_form.caption }}
+                    <button class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 rounded-lg">Upload</button>
+                </div>
+            </form>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for att in attachments %}
+                <a href="{{ att.file.url }}" target="_blank" class="flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm">
+                    <span class="text-2xl">📎</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium truncate">{{ att.caption|default:att.file.name }}</div>
+                        <div class="text-xs text-slate-500">{{ att.get_kind_display }} · {{ att.created_by|default:"" }} · {{ att.created_at|date:"M j" }}</div>
+                    </div>
+                </a>
+                {% empty %}
+                    <div class="text-sm text-slate-500 col-span-full">No proof uploaded yet — please attach the WhatsApp/Facebook screenshot or house plan.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Quotations issued -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-900">Quotations</h3>
+                {% if not lead.is_converted %}<a href="{% url 'quotations:create' %}?lead={{ lead.pk }}" class="text-xs text-brand-600 hover:underline">+ New quote</a>{% endif %}
+            </div>
+            <div class="divide-y divide-slate-100">
+                {% for q in quotations %}
+                <a href="{{ q.get_absolute_url }}" class="flex items-center justify-between py-2 px-2 rounded hover:bg-slate-50 text-sm">
+                    <span class="font-medium">{{ q.quote_number }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100">{{ q.get_status_display }}</span>
+                </a>
+                {% empty %}<div class="text-sm text-slate-500 py-2">No quote yet — create one once you have the plan-based measurements.</div>{% endfor %}
+            </div>
+        </div>
+
+        <!-- Activities -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 class="font-semibold text-slate-900 mb-3">Internal Activities</h3>
             <form method="post" action="{% url 'leads:add_activity' lead.pk %}" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
                 {% csrf_token %}
                 {{ activity_form.activity_type }}
@@ -43,7 +100,7 @@
                 {% for a in activities %}
                 <div class="py-2 text-sm">
                     <div class="flex items-center justify-between">
-                        <span class="font-medium">{{ a.get_activity_type_display }}</span>
+                        <span class="font-medium">{{ a.get_activity_type_display }} · {{ a.created_by|default:"" }}</span>
                         <span class="text-xs text-slate-500">{{ a.created_at|date:"M j, H:i" }}</span>
                     </div>
                     <div class="text-slate-600 whitespace-pre-line">{{ a.description }}</div>
@@ -56,16 +113,19 @@
     <div class="space-y-4">
         <div class="bg-white border border-slate-200 rounded-xl p-5">
             <h3 class="font-semibold text-slate-900 mb-3">Lead Status</h3>
-            {% if lead.converted_customer %}
+            {% if lead.is_converted %}
                 <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded text-sm">
                     Converted to customer:<br>
                     <a class="font-medium underline" href="{{ lead.converted_customer.get_absolute_url }}">{{ lead.converted_customer.display_name }}</a>
                 </div>
             {% else %}
-                <a href="{% url 'leads:convert' lead.pk %}" class="block text-center bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg">Convert to Customer</a>
+                <a href="{% url 'quotations:create' %}?lead={{ lead.pk }}" class="block text-center bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-lg mb-2">📄 Create Quotation</a>
+                <a href="{% url 'leads:convert' lead.pk %}" class="block text-center text-sm border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50">Skip & convert manually</a>
             {% endif %}
-            <div class="mt-3 text-xs text-slate-500">Created {{ lead.created_at|date:"M j, Y" }} by {{ lead.created_by|default:"system" }}</div>
+            <div class="mt-3 text-xs text-slate-500">Captured {{ lead.created_at|date:"M j, Y" }} by {{ lead.created_by|default:"system" }}</div>
         </div>
+
+        {% include "partials/activity_timeline.html" with entries=audit_entries %}
     </div>
 </div>
 {% endblock %}

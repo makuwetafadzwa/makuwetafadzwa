@@ -14,11 +14,12 @@ urlpatterns = [
     path("site-visits/", include("site_visits.urls", namespace="site_visits")),
     path("quotations/", include("quotations.urls", namespace="quotations")),
     path("jobs/", include("jobs.urls", namespace="jobs")),
-    path("inventory/", include("inventory.urls", namespace="inventory")),
     path("installations/", include("installations.urls", namespace="installations")),
     path("finance/", include("finance.urls", namespace="finance")),
     path("reports/", include("reports.urls", namespace="reports")),
     path("settings/", include("company_settings.urls", namespace="company_settings")),
+    path("audit/", include("audit.urls", namespace="audit")),
+    path("api/", include("audit.api_urls", namespace="audit_api")),
 ]
 
 if settings.DEBUG:

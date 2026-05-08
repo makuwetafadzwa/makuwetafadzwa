@@ -11,9 +11,16 @@ from django.views.generic import (
     UpdateView,
 )
 
+from audit.models import AuditAction, AuditLog
+from audit.services import log
 from core.mixins import AuditMixin
 from customers.models import Customer, Project
-from .forms import LeadActivityForm, LeadConvertForm, LeadForm
+from .forms import (
+    LeadActivityForm,
+    LeadAttachmentForm,
+    LeadConvertForm,
+    LeadForm,
+)
 from .models import Lead, LeadStatus
 
 
@@ -55,7 +62,13 @@ class LeadDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["activity_form"] = LeadActivityForm()
+        ctx["attachment_form"] = LeadAttachmentForm()
         ctx["activities"] = self.object.activities.all()
+        ctx["attachments"] = self.object.attachments.all()
+        ctx["audit_entries"] = AuditLog.objects.filter(
+            target_app="leads", target_model="lead", target_id=str(self.object.pk)
+        ).select_related("actor")[:30]
+        ctx["quotations"] = self.object.quotations.all()
         return ctx
 
 
@@ -93,7 +106,23 @@ def lead_add_activity(request, pk):
     return redirect(lead.get_absolute_url())
 
 
+def lead_upload_attachment(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    if request.method == "POST":
+        form = LeadAttachmentForm(request.POST, request.FILES)
+        if form.is_valid():
+            att = form.save(commit=False)
+            att.lead = lead
+            att.created_by = request.user
+            att.save()
+            messages.success(request, "Attachment uploaded.")
+        else:
+            messages.error(request, "Could not upload — check the file and try again.")
+    return redirect(lead.get_absolute_url())
+
+
 def lead_convert_to_customer(request, pk):
+    """Manual conversion path. The normal path is via quote approval."""
     lead = get_object_or_404(Lead, pk=pk)
     if lead.converted_customer:
         messages.info(request, "This lead has already been converted.")
@@ -123,6 +152,12 @@ def lead_convert_to_customer(request, pk):
             lead.converted_customer = customer
             lead.status = LeadStatus.WON
             lead.save()
+            log(
+                AuditAction.LEAD_CONVERTED,
+                lead,
+                summary=f"Lead converted to customer {customer.customer_code}",
+                extra={"customer_id": customer.pk},
+            )
             messages.success(request, "Lead converted to customer.")
             return redirect(customer.get_absolute_url())
     else:

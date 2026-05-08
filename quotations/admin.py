@@ -10,7 +10,18 @@ class QuotationItemInline(admin.TabularInline):
 
 @admin.register(Quotation)
 class QuotationAdmin(admin.ModelAdmin):
-    list_display = ("quote_number", "version", "customer", "status", "issue_date")
+    list_display = (
+        "quote_number",
+        "lead",
+        "customer",
+        "status",
+        "issue_date",
+    )
     list_filter = ("status",)
     inlines = [QuotationItemInline]
-    search_fields = ("quote_number", "customer__full_name", "customer__company_name")
+    search_fields = (
+        "quote_number",
+        "customer__full_name",
+        "customer__company_name",
+        "lead__full_name",
+    )
